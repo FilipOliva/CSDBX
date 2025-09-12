@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 import pandas as pd
 
+
 # =============================================================================
 # CONFIGURATION SECTION
 # =============================================================================
@@ -101,10 +102,13 @@ def export_etl_mappings_to_files(output_directory="./IMP_Map_Ora"):
         except Exception:
             print("Note: Thick mode initialization failed, using thin mode")
         
+        # Get password from environment variable
+        pwd = os.getenv('DWHP_ORA_PWD')
+        
         # Connect to Oracle database
         connection = oracledb.connect(
             user="ext98174",
-            password="Cervenec2025**",
+            password=pwd,
             dsn="pr03db-scan.vs.csin.cz:1521/DWHP"
         )
         
