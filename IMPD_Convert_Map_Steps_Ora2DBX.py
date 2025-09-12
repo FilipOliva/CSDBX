@@ -1,7 +1,6 @@
 """
-Oracle to Databricks SCD2 Pattern Converter - DATABRICKS VERSION
-Converts Oracle SCD2 ETL scripts to Databricks notebooks or SQL scripts
-Adapted to work on Databricks with files in /Volumes/cis_personal_catalog/filip_oliva1/Work/Import_DWHP/
+Oracle to Databricks CS - ADS Mappings Pattern Converter - DATABRICKS VERSION
+Converts Oracle ETL scripts to Databricks notebooks or SQL scripts
 """
 
 import re
@@ -773,9 +772,9 @@ def main():
     """Main execution function for Databricks environment"""
     
     # Configuration - Update these paths as needed
-    BASE_VOLUME_PATH = "/Volumes/cis_personal_catalog/filip_oliva1/Work/Import_DWHP"
-    INPUT_DIR = os.path.join(BASE_VOLUME_PATH, "IMP_Map_Ora")
-    OUTPUT_DIR = os.path.join(BASE_VOLUME_PATH, "IMP_Map_DBX_NOTEBOOKS")
+    BASE_VOLUME_PATH = "/Volumes/cis_personal_catalog/filip_oliva1/Work"
+    INPUT_DIR = os.path.join(BASE_VOLUME_PATH, "Import_DWHP")
+    OUTPUT_DIR = os.path.join(BASE_VOLUME_PATH, "Export_Map_Notebooks")
     
     DEFAULT_LOAD_DATE = "2025-08-31"
     OUTPUT_FORMAT = "notebook"  # Only notebook format supported in this version
