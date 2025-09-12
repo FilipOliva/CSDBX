@@ -1,8 +1,7 @@
 """
-Oracle to Databricks SCD2 Pattern Converter
+Oracle to Databricks SCD2 Pattern Converter - FIXED VERSION
 Converts Oracle SCD2 ETL scripts to Databricks notebooks or SQL scripts
-Enhanced version with Oracle (+) join conversion and fixed sequence handling
-Updated notebook generation with proper parameter handling
+Fixed issue with missing column lists in notebook INSERT statements
 """
 
 import re
@@ -273,11 +272,11 @@ class OracleToDatabricsConverter:
         insert_columns = [col for col in select_columns if col != auto_gen_col]
         
         # Format column list
-        formatted_columns = ',\n'.join([f' {col}' for col in insert_columns])
+        formatted_columns = ',\n'.join([f'  {col}' for col in insert_columns])
         column_clause = f"(\n{formatted_columns}\n)"
         
         # Find INSERT INTO statement and add column list
-        pattern = r'(insert\s+into\s+[\w.]+)\s*(select)'
+        pattern = r'(insert\s+into\s+[\w.${}]+)\s*(select)'
         replacement = f'\\1\n{column_clause}\n\\2'
         
         return re.sub(pattern, replacement, sql, flags=re.IGNORECASE)
@@ -336,95 +335,6 @@ class OracleToDatabricsConverter:
                 sections[current_section] = content
                     
         return sections
-
-    def generate_databricks_sql(self, sql_content: str, p_load_date: str = '2025-08-31') -> str:
-        """Generate Databricks SQL script from Oracle SQL"""
-        info = self.extract_mapping_info(sql_content)
-        sections = self.extract_sql_sections(sql_content)
-        
-        sql_script = f'''-- ============================================================================
--- ETL Mapping: {info['mapping_name']}
--- Generated from Oracle SCD2 pattern
--- Export date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
--- ============================================================================
-
--- Conversion notes:
--- - Converted Oracle (+) join syntax to ANSI LEFT JOIN
--- - Replaced Oracle sequence with auto-increment column
--- - Updated schema names for Databricks catalog structure
--- - Converted YYYYMMDD format to ddMMyyyy
--- - Converted column names with $ to _
--- - Converted timezone handling for CET
-
--- ============================================================================
--- STEP 1: Set Parameters and Variables
--- ============================================================================
-
-DECLARE OR REPLACE VARIABLE p_load_date STRING DEFAULT '{p_load_date}';
-DECLARE OR REPLACE VARIABLE p_process_key BIGINT DEFAULT {info['process_key']};
-DECLARE OR REPLACE VARIABLE map_id STRING DEFAULT '{info['mapping_name']}';
-DECLARE OR REPLACE VARIABLE dif_table_name STRING DEFAULT '{info['diff_table_name']}';
-DECLARE OR REPLACE VARIABLE max_key BIGINT DEFAULT 0;
-
--- Get maximum key from target table
-SET VAR max_key = (
-    SELECT COALESCE(MAX({info['key_column'].lower()}), 0) 
-    FROM gap_catalog.ads_owner.{info['target_table']}
-);
-
-SELECT 'Current maximum {info['key_column']}: ' || max_key as info_message;
-
--- ============================================================================
--- STEP 2: Truncate and Fill XC Table
--- ============================================================================
-
-TRUNCATE TABLE {self.schema_mappings['ADS_ETL_OWNER']}.{info['xc_table']};
-
-{self.convert_xc_insert_section_sql(sections.get('xc_insert', ''), info)}
-
--- ============================================================================
--- STEP 3: Create DIFF Table
--- ============================================================================
-
-{self.convert_diff_table_creation_sql(sections.get('diff_table_create', ''), info)}
-
--- ============================================================================
--- STEP 4: Populate DIFF Table - New/Updated Records
--- ============================================================================
-
-{self.convert_diff_insert_new_section_sql(sections.get('diff_insert_new', ''), info)}
-
--- ============================================================================
--- STEP 5: Populate DIFF Table - Deleted Records
--- ============================================================================
-
-{self.convert_diff_insert_deleted_section_sql(sections.get('diff_insert_deleted', ''), info)}
-
--- ============================================================================
--- STEP 6: Close Old Records in Target Table
--- ============================================================================
-
-{self.convert_target_update_section_sql(sections.get('target_update', ''), info)}
-
--- ============================================================================
--- STEP 7: Insert Changed Records to Target Table
--- ============================================================================
-
-{self.convert_target_insert_changed_section_sql(sections.get('target_insert_changed', ''), info)}
-
--- ============================================================================
--- STEP 8: Insert New Records to Target Table
--- ============================================================================
-
-{self.convert_target_insert_new_section_sql(sections.get('target_insert_new', ''), info)}
-
--- ============================================================================
--- STEP 9: Validation
--- ============================================================================
-
-{self.generate_validation_section_sql(info)}
-'''
-        return sql_script
 
     def generate_databricks_notebook(self, sql_content: str, p_load_date: str = '2025-08-31') -> str:
         """Generate complete Databricks notebook from Oracle SQL with proper parameter handling"""
@@ -534,7 +444,7 @@ print("p_load_date: "+p_load_date)
 '''
         return notebook_content
     
-    # NOTEBOOK-SPECIFIC CONVERSION METHODS (using : notation)
+    # NOTEBOOK-SPECIFIC CONVERSION METHODS (using : notation) - FIXED VERSIONS
     def convert_xc_insert_section_notebook(self, sql: str, info: Dict) -> str:
         """Convert XC table insert section for notebook (using : notation)"""
         if not sql:
@@ -588,7 +498,7 @@ print("p_load_date: "+p_load_date)
         return sql
     
     def convert_diff_insert_new_section_notebook(self, sql: str, info: Dict) -> str:
-        """Convert DIFF table insert for new/updated records - notebook version"""
+        """Convert DIFF table insert for new/updated records - notebook version - FIXED"""
         if not sql:
             return "-- DIFF insert new section not found"
             
@@ -598,10 +508,13 @@ print("p_load_date: "+p_load_date)
         sql = self.convert_oracle_joins(sql)
         sql = sql.replace(info['diff_table_oracle'], '${var.dif_table_name}')
         
+        # FIX: Add explicit column list to INSERT statement (excluding auto-generated columns)
+        sql = self.add_insert_column_list(sql, info)
+        
         return sql
     
     def convert_diff_insert_deleted_section_notebook(self, sql: str, info: Dict) -> str:
-        """Convert DIFF table insert for deleted records - notebook version"""
+        """Convert DIFF table insert for deleted records - notebook version - FIXED"""
         if not sql:
             return "-- DIFF insert deleted section not found"
             
@@ -610,6 +523,9 @@ print("p_load_date: "+p_load_date)
         sql = self.convert_date_functions(sql)
         sql = self.convert_oracle_joins(sql)
         sql = sql.replace(info['diff_table_oracle'], '${var.dif_table_name}')
+        
+        # FIX: Add explicit column list to INSERT statement (excluding auto-generated columns)
+        sql = self.add_insert_column_list(sql, info)
         
         return sql
     
@@ -704,228 +620,6 @@ union all
 select '4-{info['target_table']}', count(1) from {self.schema_mappings['ADS_OWNER']}.{info['target_table']} where {info['key_column'].lower().replace('_key', '_source_sys_origin')} = 'RDS_ANALYTICALEVENTSTATUS'
 ) order by 1"""
 
-    # EXISTING METHODS (keeping them for backward compatibility and SQL output)
-    def convert_xc_insert_section(self, sql: str, info: Dict) -> str:
-        """Convert XC table insert section - legacy method for compatibility"""
-        return self.convert_xc_insert_section_notebook(sql, info)
-    
-    def convert_diff_table_creation(self, sql: str, info: Dict) -> str:
-        """Convert DIFF table creation - legacy method"""
-        return self.convert_diff_table_creation_notebook(sql, info)
-    
-    def convert_diff_insert_new_section(self, sql: str, info: Dict) -> str:
-        """Convert DIFF table insert for new/updated records - legacy method"""
-        return self.convert_diff_insert_new_section_notebook(sql, info)
-    
-    def convert_diff_insert_deleted_section(self, sql: str, info: Dict) -> str:
-        """Convert DIFF table insert for deleted records - legacy method"""
-        return self.convert_diff_insert_deleted_section_notebook(sql, info)
-    
-    def convert_target_update_section(self, sql: str, info: Dict) -> str:
-        """Convert target table update section - legacy method"""
-        return self.convert_target_update_section_notebook(sql, info)
-    
-    def convert_target_insert_changed_section(self, sql: str, info: Dict) -> str:
-        """Convert target table insert for changed records - legacy method"""
-        return self.convert_target_insert_changed_section_notebook(sql, info)
-    
-    def convert_target_insert_new_section(self, sql: str, info: Dict) -> str:
-        """Convert target table insert for new records - legacy method"""
-        return self.convert_target_insert_new_section_notebook(sql, info)
-    
-    def generate_validation_section(self, info: Dict) -> str:
-        """Generate validation queries - legacy method"""
-        return self.generate_validation_section_notebook(info)
-
-    # SQL-specific methods for pure SQL output (FIXED VERSIONS)
-    def convert_xc_insert_section_sql(self, sql: str, info: Dict) -> str:
-        """Convert XC table insert section for pure SQL"""
-        if not sql:
-            return "-- XC insert section not found"
-            
-        sql = self.convert_schema_names(sql)
-        sql = self.convert_date_functions(sql)
-        sql = self.convert_oracle_joins(sql)  # Add Oracle join conversion
-        sql = re.sub(r"to_date\('\d{8}','yyyymmdd'\)", "DATE(p_load_date)", sql)
-        sql = re.sub(r"sys_effective_date = to_date\('\d{8}','yyyymmdd'\)", 
-                    "DATE(from_utc_timestamp(SYS_EFFECTIVE_DATE, 'Europe/Prague')) = DATE(p_load_date)", sql)
-        
-        return self.normalize_sql_ending(sql)
-    
-    def convert_diff_table_creation_sql(self, sql: str, info: Dict) -> str:
-        """Convert DIFF table creation for pure SQL"""
-        if not sql:
-            # Generate a default DIFF table if not found
-            databricks_table_name = info.get('diff_table_name', f"gap_catalog.ads_owner.DIFF_{info.get('mapping_name', 'UNKNOWN')}")
-            key_col = info.get('key_column', 'EST_KEY')
-            
-            return f"""-- DIFF table creation not found in source, generating default
-DROP TABLE IF EXISTS {databricks_table_name};
-
-CREATE TABLE {databricks_table_name} (
-  tech_del_flg  CHAR(1),
-  tech_new_rec  CHAR(1),
-  tech_rid      VARCHAR(655),
-  {key_col}  INTEGER,
-  {key_col}_NEW BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1),
-  {key_col.replace('_KEY', '_SOURCE_ID')}  VARCHAR(120),
-  {key_col.replace('_KEY', '_SOURCE_SYSTEM_ID')}  VARCHAR(120),
-  {key_col.replace('_KEY', '_SOURCE_SYS_ORIGIN')}  VARCHAR(120),
-  {key_col.replace('_KEY', '_DESC')}  VARCHAR(4000)
-);"""
-            
-        sql = self.convert_schema_names(sql)
-        sql = self.convert_column_names(sql)
-        
-        oracle_table_name = info.get('diff_table_oracle', 'diff_table')
-        databricks_table_name = info.get('diff_table_name', 'gap_catalog.ads_owner.diff_table')
-        sql = sql.replace(oracle_table_name, databricks_table_name)
-        
-        sql = f"DROP TABLE IF EXISTS {databricks_table_name};\n\n" + sql
-        
-        key_col = info.get('key_column', 'EST_KEY')
-        if f"{key_col}_NEW" not in sql:
-            pattern = f"({key_col}\\s+INTEGER)"
-            replacement = f"\\1,\n  {key_col}_NEW BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1)"
-            sql = re.sub(pattern, replacement, sql, flags=re.IGNORECASE)
-        
-        return self.normalize_sql_ending(sql)
-    
-    def convert_diff_insert_new_section_sql(self, sql: str, info: Dict) -> str:
-        """Convert DIFF table insert for new/updated records - SQL version"""
-        if not sql:
-            return "-- DIFF insert new section not found"
-            
-        sql = self.convert_schema_names(sql)
-        sql = self.convert_column_names(sql)
-        sql = self.convert_date_functions(sql)
-        sql = self.convert_oracle_joins(sql)  # Add Oracle join conversion
-        sql = sql.replace(info['diff_table_oracle'], info['diff_table_name'])
-        
-        # Add explicit column list to INSERT statement (excluding auto-generated columns)
-        sql = self.add_insert_column_list(sql, info)
-        
-        return self.normalize_sql_ending(sql)
-    
-    def convert_diff_insert_deleted_section_sql(self, sql: str, info: Dict) -> str:
-        """Convert DIFF table insert for deleted records - SQL version"""
-        if not sql:
-            return "-- DIFF insert deleted section not found"
-            
-        sql = self.convert_schema_names(sql)
-        sql = self.convert_column_names(sql)
-        sql = self.convert_date_functions(sql)
-        sql = self.convert_oracle_joins(sql)  # Add Oracle join conversion
-        sql = sql.replace(info['diff_table_oracle'], info['diff_table_name'])
-        
-        # Add explicit column list to INSERT statement (excluding auto-generated columns)
-        sql = self.add_insert_column_list(sql, info)
-        
-        return self.normalize_sql_ending(sql)
-    
-    def convert_target_update_section_sql(self, sql: str, info: Dict) -> str:
-        """Convert target table update section - SQL version"""
-        if not sql:
-            return "-- Target update section not found"
-            
-        sql = self.convert_schema_names(sql)
-        sql = self.convert_column_names(sql)
-        sql = self.convert_date_functions(sql)
-        sql = self.convert_oracle_joins(sql)  # Add Oracle join conversion
-        sql = sql.replace(info['diff_table_oracle'], info['diff_table_name'])
-        
-        # More specific replacements instead of global number replacement
-        # Replace process key numbers (typically 7-8 digit numbers used as process keys)
-        sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_UPDATE_PROCESS_KEY|\s*,?\s*$)', 'p_process_key', sql, flags=re.IGNORECASE)
-        
-        # Replace specific date patterns in SET clause only
-        # Pattern: EST_VALID_TO = to_date('YYYYMMDD','YYYYMMDD')-1
-        sql = re.sub(r"EST_VALID_TO\s*=\s*to_date\('(\d{8})','YYYYMMDD'\)\s*-\s*1", 
-                     "EST_VALID_TO = to_date('p_load_date','yyyy-MM-dd')-1", sql, flags=re.IGNORECASE)
-        
-        # Keep the high date '30000101' in WHERE clause as is - no change needed
-        # The pattern to_date('30000101','yyyyMMdd') should remain unchanged
-        
-        return self.normalize_sql_ending(sql)
-
-    def convert_target_insert_changed_section_sql(self, sql: str, info: Dict) -> str:
-        """Convert target table insert for changed records - SQL version"""
-        if not sql:
-            return "-- Target insert changed section not found"
-            
-        sql = self.convert_schema_names(sql)
-        sql = self.convert_column_names(sql)
-        sql = self.convert_date_functions(sql)
-        sql = self.convert_oracle_joins(sql)  # Add Oracle join conversion
-        sql = sql.replace(info['diff_table_oracle'], info['diff_table_name'])
-        
-        # Replace process key numbers specifically
-        sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_INSERT_PROCESS_KEY)', 'p_process_key', sql, flags=re.IGNORECASE)
-        sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_UPDATE_PROCESS_KEY)', 'p_process_key', sql, flags=re.IGNORECASE)
-        
-        # Convert load date patterns for EST_VALID_FROM
-        sql = re.sub(r"to_date\('(\d{8})','YYYYMMDD'\)\s+as\s+EST_VALID_FROM", 
-                     "to_date('p_load_date','yyyy-MM-dd') as EST_VALID_FROM", sql, flags=re.IGNORECASE)
-        
-        # Keep high date pattern for EST_VALID_TO unchanged
-        # to_date('30000101','yyyyMMdd') as EST_VALID_TO should remain as is
-        
-        return self.normalize_sql_ending(sql)
-
-    def convert_target_insert_new_section_sql(self, sql: str, info: Dict) -> str:
-        """Convert target table insert for new records - SQL version - FIXED"""
-        if not sql:
-            return "-- Target insert new section not found"
-            
-        sql = self.convert_schema_names(sql)
-        sql = self.convert_column_names(sql)
-        sql = self.convert_date_functions(sql)
-        sql = self.convert_oracle_joins(sql)  # Add Oracle join conversion
-        sql = sql.replace(info['diff_table_oracle'], info['diff_table_name'])
-        
-        # FIXED: Replace Oracle sequence with identity column using target table name
-        key_col = info.get('key_column', 'EST_KEY')
-        target_table = info.get('target_table', 'event_status')
-        
-        # Convert target table name to sequence name (e.g., 'event_status' -> 'EVENT_STATUS')
-        sequence_table_name = target_table.upper()
-        
-        # Updated pattern to handle full catalog.schema.sequence format
-        sequence_patterns = [
-            # Pattern 1: Full catalog.schema.sequence format (e.g., gap_catalog.ads_owner.EVENT_STATUS_S.nextval)
-            rf'[\w.]+\.{sequence_table_name}_S\.nextval(\s+as\s+{key_col})',
-            # Pattern 2: Simple schema.sequence format (e.g., ADS_OWNER.EVENT_STATUS_S.nextval)
-            rf'\w+\.{sequence_table_name}_S\.nextval(\s+as\s+{key_col})',
-            # Pattern 3: Just sequence name (e.g., EVENT_STATUS_S.nextval)
-            rf'{sequence_table_name}_S\.nextval(\s+as\s+{key_col})'
-        ]
-        
-        for pattern in sequence_patterns:
-            sql = re.sub(pattern, f'{key_col}_NEW\\1', sql, flags=re.IGNORECASE)
-        
-        # Replace process key numbers specifically
-        sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_INSERT_PROCESS_KEY)', 'p_process_key', sql, flags=re.IGNORECASE)
-        sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_UPDATE_PROCESS_KEY)', 'p_process_key', sql, flags=re.IGNORECASE)
-        
-        # Convert load date patterns for EST_VALID_FROM
-        sql = re.sub(r"to_date\('(\d{8})','YYYYMMDD'\)\s+as\s+EST_VALID_FROM", 
-                     "to_date('p_load_date','yyyy-MM-dd') as EST_VALID_FROM", sql, flags=re.IGNORECASE)
-        
-        # Keep high date pattern for EST_VALID_TO unchanged
-        # to_date('30000101','yyyyMMdd') as EST_VALID_TO should remain as is
-        
-        return self.normalize_sql_ending(sql)
-    
-    def generate_validation_section_sql(self, info: Dict) -> str:
-        """Generate validation queries - SQL version"""
-        return f"""SELECT * FROM (
-SELECT '1-{info['xc_table']}', COUNT(1) FROM {self.schema_mappings['ADS_ETL_OWNER']}.{info['xc_table']}
-UNION ALL
-SELECT '2-DIFF_TABLE', COUNT(1) FROM  {info['diff_table_name']}
-UNION ALL
-SELECT '3-{info['target_table']}', COUNT(1) FROM {self.schema_mappings['ADS_OWNER']}.{info['target_table']} WHERE {info['key_column'].lower().replace('_key', '_source_sys_origin')} = 'doplnit'
-) ORDER BY 1;"""
-
 def convert_file(input_file: str, output_file: str, output_format: str = 'sql', p_load_date: str = '2025-08-31'):
     """Convert a single Oracle SQL file to Databricks notebook or SQL script"""
     converter = OracleToDatabricsConverter()
@@ -966,15 +660,8 @@ def batch_convert(input_directory: str, output_directory: str, output_format: st
 
 # Example usage
 if __name__ == "__main__":
-    # Convert single file to SQL
-    # convert_file("ADS_RDS_EVENT_STATUS_ANALYTICAL_NEW.sql", "ADS_RDS_EVENT_STATUS_ANALYTICAL_databricks_enhanced.sql", "sql", "2025-08-31")
+    # Convert single file to Notebook - FIXED VERSION
+    # convert_file("ADS_RDS_EVENT_STATUS_ANALYTICAL_NEW.sql", "ADS_RDS_EVENT_STATUS_ANALYTICAL_FIXED.py", "notebook","2025-08-31")
     
-    # Convert single file to Notebook
-    # convert_file("ADS_RDS_EVENT_STATUS_ANALYTICAL_NEW.sql", "ADS_RDS_EVENT_STATUS_ANALYTICAL_enhanced.py", "notebook","2025-08-31")
-    
-    # Batch convert directory to SQL scripts
-    batch_convert("IMP_Map_Ora", "IMP_Map_DBX", "notebook", "2025-08-31")
-    #batch_convert("IMP_Map_Ora", "IMP_Map_DBX", "sql", "2025-08-31")
-    
-    # Batch convert directory to Notebooks  
-    # batch_convert("oracle_scripts", "databricks_notebooks", "notebook")
+    # Batch convert directory to Notebooks - FIXED VERSION  
+    batch_convert("IMP_Map_Ora", "IMP_Map_DBX_FIXED", "notebook", "2025-08-31")
