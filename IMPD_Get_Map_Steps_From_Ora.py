@@ -5,7 +5,7 @@ Exports ETL mapping SQL commands to individual files in DBFS
 Uses Spark JDBC connection to Oracle DWHP database
 """
 
-import re
+import re, os
 from datetime import datetime
 from pyspark.sql import SparkSession
 
