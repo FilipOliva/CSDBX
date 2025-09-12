@@ -459,7 +459,6 @@ print("p_process_key: "+p_process_key)
 '''
         return notebook_content
     
-    # NOTEBOOK-SPECIFIC CONVERSION METHODS (using ${{p_variable}} notation for Databricks widgets)
     def convert_xc_insert_section_notebook(self, sql: str, info: Dict) -> str:
         """Convert XC table insert section for notebook"""
         if not sql:
@@ -469,9 +468,22 @@ print("p_process_key: "+p_process_key)
         sql = self.convert_date_functions(sql)
         sql = self.convert_oracle_joins(sql)
         
-        # Convert date parameter references to use p_load_date widget
+        # FIXED: Convert date parameter references to use p_load_date widget with proper CAST syntax
+        # Pattern 1: Direct sys_effective_date = to_date('yyyymmdd','yyyymmdd') format
         sql = re.sub(r"sys_effective_date\s*=\s*to_date\('\d{8}','yyyymmdd'\)", 
-                    "DATE(from_utc_timestamp(SYS_EFFECTIVE_DATE, 'Europe/Prague')) = '$p_load_date'", sql)
+                    "CAST(from_utc_timestamp(SYS_EFFECTIVE_DATE, 'Europe/Prague') AS DATE) = '$p_load_date'", sql, flags=re.IGNORECASE)
+        
+        # Pattern 2: Remove table prefix from CAST statements (fixes the RDS_HUMANTASKEVENTTYPE.CAST issue)
+        sql = re.sub(r"(\w+\.)CAST\(from_utc_timestamp\(SYS_EFFECTIVE_DATE,\s*'Europe/Prague'\)\s+AS\s+DATE\)", 
+                    "CAST(from_utc_timestamp(SYS_EFFECTIVE_DATE, 'Europe/Prague') AS DATE)", sql, flags=re.IGNORECASE)
+        
+        # Pattern 3: Handle any remaining DATE(from_utc_timestamp(...)) patterns and remove table prefixes
+        sql = re.sub(r"(\w+\.)DATE\(from_utc_timestamp\(SYS_EFFECTIVE_DATE,\s*'Europe/Prague'\)\)\s*=\s*'\$p_load_date'", 
+                    "CAST(from_utc_timestamp(SYS_EFFECTIVE_DATE, 'Europe/Prague') AS DATE) = '$p_load_date'", sql, flags=re.IGNORECASE)
+        
+        # Pattern 4: Clean up any remaining table.DATE patterns
+        sql = re.sub(r"(\w+\.)DATE\(from_utc_timestamp\(SYS_EFFECTIVE_DATE,\s*'Europe/Prague'\)\)", 
+                    "CAST(from_utc_timestamp(SYS_EFFECTIVE_DATE, 'Europe/Prague') AS DATE)", sql, flags=re.IGNORECASE)
         
         return sql
     
