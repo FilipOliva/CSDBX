@@ -18,7 +18,6 @@ def get_oracle_credentials():
     """
     try:
         # Get credentials from environment variables
-        #jdbc_url = os.getenv('ORACLE_DWHP_JDBC_URL', 'jdbc:oracle:thin:@//pr03db-scan.vs.csin.cz:1521/DWHP')
         username = os.getenv('ORACLE_DWHP_USERNAME')
         password = os.getenv('ORACLE_DWHP_PASSWORD')
         
@@ -42,7 +41,7 @@ def get_oracle_credentials():
 oracle_config = get_oracle_credentials()
 
 # Output directory in DBFS for generated SQL files
-output_dir = "/dbfs/FileStore/etl_mappings/IMP_Map_Ora"
+output_dir = "/Volumes/cis_personal_catalog/filip_oliva1/Work/Import_DWHP/"
 
 # ETL Mappings to process - easy to maintain and modify
 MAPPING_LIST = [
