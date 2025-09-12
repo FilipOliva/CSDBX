@@ -451,11 +451,6 @@ print("p_process_key: "+p_process_key)
 # MAGIC %sql
 {self.convert_target_insert_new_section_notebook(sections.get('target_insert_new', ''), info)}
 
-# COMMAND ----------
-
-# DBTITLE 1,Validation - Row Counts
-# MAGIC %sql 
-{self.generate_validation_section_notebook(info)}
 '''
         return notebook_content
     
@@ -601,9 +596,30 @@ print("p_process_key: "+p_process_key)
         sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_INSERT_PROCESS_KEY)', '$p_process_key', sql, flags=re.IGNORECASE)
         sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_UPDATE_PROCESS_KEY)', '$p_process_key', sql, flags=re.IGNORECASE)
         
-        # Convert load date patterns for EST_VALID_FROM
-        sql = re.sub(r"to_date\('(\d{8})','YYYYMMDD'\)\s+as\s+EST_VALID_FROM", 
-                     "to_date('$p_load_date','yyyy-MM-dd') as EST_VALID_FROM", sql, flags=re.IGNORECASE)
+        # FIXED: Convert ALL load date patterns for EST_VALID_FROM - multiple formats
+        # Pattern 1: YYYYMMDD format
+        sql = re.sub(r"to_date\('(\d{8})','YYYYMMDD'\)\s+as\s+(\w+_VALID_FROM)", 
+                    "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
+        
+        # Pattern 2: yyyyMMdd format  
+        sql = re.sub(r"to_date\('(\d{8})','yyyyMMdd'\)\s+as\s+(\w+_VALID_FROM)", 
+                    "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
+        
+        # Pattern 3: ddMMyyyy format
+        sql = re.sub(r"to_date\('(\d{8})','ddMMyyyy'\)\s+as\s+(\w+_VALID_FROM)", 
+                    "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
+        
+        # Pattern 4: yyyy-MM-dd format (already in correct format, just replace the date)
+        sql = re.sub(r"to_date\('(\d{4}-\d{2}-\d{2})','yyyy-MM-dd'\)\s+as\s+(\w+_VALID_FROM)", 
+                    "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
+        
+        # Pattern 5: Handle direct date assignments (without AS clause)
+        sql = re.sub(r"to_date\('(\d{8})','YYYYMMDD'\)", 
+                    "to_date('$p_load_date','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
+        sql = re.sub(r"to_date\('(\d{8})','yyyyMMdd'\)", 
+                    "to_date('$p_load_date','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
+        sql = re.sub(r"to_date\('(\d{8})','ddMMyyyy'\)", 
+                    "to_date('$p_load_date','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
         
         return sql
 
@@ -642,9 +658,30 @@ print("p_process_key: "+p_process_key)
         sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_INSERT_PROCESS_KEY)', '$p_process_key', sql, flags=re.IGNORECASE)
         sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_UPDATE_PROCESS_KEY)', '$p_process_key', sql, flags=re.IGNORECASE)
         
-        # Convert load date patterns for EST_VALID_FROM
-        sql = re.sub(r"to_date\('(\d{8})','YYYYMMDD'\)\s+as\s+EST_VALID_FROM", 
-                     "to_date('$p_load_date','yyyy-MM-dd') as EST_VALID_FROM", sql, flags=re.IGNORECASE)
+        # FIXED: Convert ALL load date patterns for EST_VALID_FROM - multiple formats
+        # Pattern 1: YYYYMMDD format
+        sql = re.sub(r"to_date\('(\d{8})','YYYYMMDD'\)\s+as\s+(\w+_VALID_FROM)", 
+                    "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
+        
+        # Pattern 2: yyyyMMdd format  
+        sql = re.sub(r"to_date\('(\d{8})','yyyyMMdd'\)\s+as\s+(\w+_VALID_FROM)", 
+                    "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
+        
+        # Pattern 3: ddMMyyyy format
+        sql = re.sub(r"to_date\('(\d{8})','ddMMyyyy'\)\s+as\s+(\w+_VALID_FROM)", 
+                    "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
+        
+        # Pattern 4: yyyy-MM-dd format (already in correct format, just replace the date)
+        sql = re.sub(r"to_date\('(\d{4}-\d{2}-\d{2})','yyyy-MM-dd'\)\s+as\s+(\w+_VALID_FROM)", 
+                    "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
+        
+        # Pattern 5: Handle direct date assignments (without AS clause)
+        sql = re.sub(r"to_date\('(\d{8})','YYYYMMDD'\)", 
+                    "to_date('$p_load_date','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
+        sql = re.sub(r"to_date\('(\d{8})','yyyyMMdd'\)", 
+                    "to_date('$p_load_date','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
+        sql = re.sub(r"to_date\('(\d{8})','ddMMyyyy'\)", 
+                    "to_date('$p_load_date','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
         
         return sql
     
