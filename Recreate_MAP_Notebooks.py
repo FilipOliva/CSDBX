@@ -2,7 +2,7 @@ import base64
 import requests
 import os
 
-def batch_import_notebooks(source_dir, target_folder, tag_value="ETL_Mapping"):
+def batch_import_notebooks(source_dir, target_folder, overwrite=True, tag_value="ETL_Mapping"):
     workspace_url = spark.conf.get("spark.databricks.workspaceUrl")
     token = dbutils.notebook.entry_point.getDbutils().notebook().getContext().apiToken().get()
     headers = {'Authorization': f'Bearer {token}'}
@@ -25,12 +25,13 @@ def batch_import_notebooks(source_dir, target_folder, tag_value="ETL_Mapping"):
             notebook_name = "MAP_" + filename.replace('.py', '')
             notebook_path = f"{target_folder}/{notebook_name}"
             
-            # Import notebook
+            # Import notebook with overwrite option
             data = {
                 "path": notebook_path,
                 "content": base64.b64encode(content.encode()).decode(),
                 "language": "PYTHON",
-                "format": "SOURCE"
+                "format": "SOURCE",
+                "overwrite": overwrite  # This handles the RESOURCE_ALREADY_EXISTS error
             }
             
             response = requests.post(f"https://{workspace_url}/api/2.0/workspace/import", 
@@ -38,15 +39,6 @@ def batch_import_notebooks(source_dir, target_folder, tag_value="ETL_Mapping"):
             
             if response.status_code == 200:
                 print(f"✅ {filename} → {notebook_name}")
-                
-                # Add tag (optional - may not work in all environments)
-                try:
-                    tag_data = {"path": notebook_path, "object_type": "NOTEBOOK"}
-                    requests.patch(f"https://{workspace_url}/api/2.0/workspace/set-permissions",
-                                 headers=headers, json=tag_data)
-                except:
-                    pass  # Tags may not be supported
-                    
                 success_count += 1
             else:
                 print(f"❌ {filename} - Error: {response.text}")
@@ -58,8 +50,9 @@ def batch_import_notebooks(source_dir, target_folder, tag_value="ETL_Mapping"):
     
     print(f"\n📊 Results: ✅{success_count} ❌{failed_count}")
 
-# Usage:
+# Usage with overwrite enabled:
 batch_import_notebooks(
     source_dir="/Volumes/cis_personal_catalog/filip_oliva1/work/Export_Map_Notebooks",
-    target_folder="/Users/filip.oliva1@ext.csas.cz/ADS"
+    target_folder="/Users/filip.oliva1@ext.csas.cz/ADS",
+    overwrite=True
 )
