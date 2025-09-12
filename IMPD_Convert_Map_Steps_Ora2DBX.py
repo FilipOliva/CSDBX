@@ -567,9 +567,22 @@ print("p_process_key: "+p_process_key)
         sql = self.convert_oracle_joins(sql)
         
         sql = sql.replace(info['diff_table_oracle'], '${var.dif_table_name}')
+        
+        # Fix process key replacement - make it more specific to avoid replacing other numbers
         sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_UPDATE_PROCESS_KEY|\s*,?\s*$)', '$p_process_key', sql, flags=re.IGNORECASE)
-        sql = re.sub(r"EST_VALID_TO\s*=\s*to_date\('(\d{8})','YYYYMMDD'\)\s*-\s*1", 
-                     "EST_VALID_TO = to_date('$p_load_date','yyyy-MM-dd')-1", sql, flags=re.IGNORECASE)
+        
+        # FIXED: Convert EST_VALID_TO date patterns to use parameter with consistent format
+        # Pattern 1: Handle YYYYMMDD format dates in EST_VALID_TO assignments
+        sql = re.sub(r"(\w+_VALID_TO)\s*=\s*to_date\('\d{8}','YYYYMMDD'\)\s*-\s*1", 
+                    r"\1 = to_date('$p_load_date','yyyy-MM-dd')-1", sql, flags=re.IGNORECASE)
+        
+        # Pattern 2: Handle yyyyMMdd format dates in EST_VALID_TO assignments  
+        sql = re.sub(r"(\w+_VALID_TO)\s*=\s*to_date\('\d{8}','yyyyMMdd'\)\s*-\s*1", 
+                    r"\1 = to_date('$p_load_date','yyyy-MM-dd')-1", sql, flags=re.IGNORECASE)
+        
+        # Pattern 3: Handle ddMMyyyy format dates in EST_VALID_TO assignments
+        sql = re.sub(r"(\w+_VALID_TO)\s*=\s*to_date\('\d{8}','ddMMyyyy'\)\s*-\s*1", 
+                    r"\1 = to_date('$p_load_date','yyyy-MM-dd')-1", sql, flags=re.IGNORECASE)
         
         return sql
 
