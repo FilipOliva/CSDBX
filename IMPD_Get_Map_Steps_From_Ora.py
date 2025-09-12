@@ -12,14 +12,34 @@ from pyspark.sql import SparkSession
 # =============================================================================
 # CONFIGURATION SECTION
 # =============================================================================
-
-# Oracle connection configuration (same as Table_Import_Ora2DBX.py)
-oracle_config = {
-    "jdbc_url": "jdbc:oracle:thin:@//pr03db-scan.vs.csin.cz:1521/DWHP",
-    "user": "ext98174",
-    "password": "Cervenec2025**",
-    "driver": "oracle.jdbc.driver.OracleDriver"
-}
+def get_oracle_credentials():
+    """
+    Securely retrieve Oracle credentials from environment variables
+    """
+    try:
+        # Get credentials from environment variables
+        #jdbc_url = os.getenv('ORACLE_DWHP_JDBC_URL', 'jdbc:oracle:thin:@//pr03db-scan.vs.csin.cz:1521/DWHP')
+        username = os.getenv('ORACLE_DWHP_USERNAME')
+        password = os.getenv('ORACLE_DWHP_PASSWORD')
+        
+        if not username or not password:
+            raise Exception("ORACLE_DWHP_USERNAME or ORACLE_DWHP_PASSWORD environment variables not set")
+        
+        credentials = {
+            "jdbc_url": "jdbc:oracle:thin:@//pr03db-scan.vs.csin.cz:1521/DWHP",
+            "user": username,
+            "password": password,
+            "driver": "oracle.jdbc.driver.OracleDriver"
+        }
+        
+        print("✅ Credentials loaded from environment variables")
+        return credentials
+        
+    except Exception as e:
+        print(f"❌ Error loading credentials: {e}")
+        raise
+        
+oracle_config = get_oracle_credentials()
 
 # Output directory in DBFS for generated SQL files
 output_dir = "/dbfs/FileStore/etl_mappings/IMP_Map_Ora"
