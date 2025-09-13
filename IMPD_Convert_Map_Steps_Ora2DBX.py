@@ -621,7 +621,7 @@ print("p_process_key: "+p_process_key)
         sql = re.sub(r"to_date\('(\d{8})','ddMMyyyy'\)", 
                     "to_date('$p_load_date','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
         
-        return sql
+        return sql 
 
     def convert_target_insert_new_section_notebook(self, sql: str, info: Dict) -> str:
         """Convert target table insert for new records - notebook version"""
