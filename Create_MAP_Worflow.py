@@ -4,18 +4,27 @@ Databricks Workflow Generator Script
 Creates a workflow from all notebooks in a specified folder
 
 Usage:
-python create_workflow_from_folder.py "My_ETL_Workflow" "ADS"
-python create_workflow_from_folder.py "Event_Status_ETL" "ETL/EventStatus"
+1. Modify the configuration variables below
+2. Run the script in Databricks notebook
 
 Requirements:
 pip install databricks-sdk
 """
 
-import argparse
 import sys
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.jobs import Task, NotebookTask, JobSettings
 import os
+
+# ============================================================================
+# CONFIGURATION - MODIFY THESE VALUES
+# ============================================================================
+
+workflow_name = "ADS_RDS2"
+folder_name = "ADS"
+base_path = "/Workspace/Users/filip.oliva1@ext.csas.cz"
+
+# ============================================================================
 
 
 def get_notebooks_from_folder(w: WorkspaceClient, folder_path: str):
@@ -82,7 +91,7 @@ def create_workflow_tasks(notebooks: list):
     return tasks
 
 
-def create_workflow(workflow_name: str, folder_name: str, base_path: str = "/Workspace/Users/filip.oliva1@ext.csas.cz"):
+def create_workflow(workflow_name: str, folder_name: str, base_path: str):
     """
     Main function to create the workflow
     
@@ -98,7 +107,7 @@ def create_workflow(workflow_name: str, folder_name: str, base_path: str = "/Wor
         print("✓ Connected to Databricks workspace")
     except Exception as e:
         print(f"✗ Failed to connect to Databricks: {e}")
-        sys.exit(1)
+        return
     
     # Construct full folder path
     folder_path = f"{base_path}/{folder_name}"
@@ -109,7 +118,7 @@ def create_workflow(workflow_name: str, folder_name: str, base_path: str = "/Wor
     
     if not notebooks:
         print(f"✗ No notebooks found in folder: {folder_path}")
-        sys.exit(1)
+        return
     
     print(f"✓ Found {len(notebooks)} notebook(s)")
     
@@ -118,24 +127,21 @@ def create_workflow(workflow_name: str, folder_name: str, base_path: str = "/Wor
     
     if not tasks:
         print("✗ No tasks created")
-        sys.exit(1)
+        return
     
     # Create the workflow
     try:
-        job_settings = JobSettings(
+        print(f"Creating workflow: {workflow_name}")
+        job = w.jobs.create(
             name=workflow_name,
             tasks=tasks,
             max_concurrent_runs=1,
             timeout_seconds=3600,  # 1 hour timeout
             tags={
-                "created_by": "workflow_generator_script",
-                "source_folder": folder_name,
-                "generated": "true"
+                "created_by": "Create_MAP_Worflow.py",
+                "source_folder": folder_name
             }
         )
-        
-        print(f"Creating workflow: {workflow_name}")
-        job = w.jobs.create(job_settings)
         
         print(f"✓ Workflow created successfully!")
         print(f"  - Workflow ID: {job.job_id}")
@@ -147,54 +153,17 @@ def create_workflow(workflow_name: str, folder_name: str, base_path: str = "/Wor
         
     except Exception as e:
         print(f"✗ Failed to create workflow: {e}")
-        sys.exit(1)
+        return
 
 
-def main():
-    """
-    Main script entry point
-    """
-    parser = argparse.ArgumentParser(
-        description="Create Databricks workflow from notebooks in a folder",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python create_workflow_from_folder.py "ADS_ETL_Pipeline" "ADS"
-  python create_workflow_from_folder.py "Event_Status_Processing" "ETL/EventStatus"
-  
-Note: Make sure you have configured Databricks authentication:
-  - Set DATABRICKS_HOST and DATABRICKS_TOKEN environment variables, or
-  - Use Azure CLI authentication, or
-  - Configure ~/.databrickscfg file
-        """
-    )
-    
-    parser.add_argument(
-        "workflow_name",
-        help="Name of the workflow to create"
-    )
-    
-    parser.add_argument(
-        "folder_name",
-        help="Name of the folder containing notebooks (relative to base path)"
-    )
-    
-    parser.add_argument(
-        "--base-path",
-        default="/Workspace/Users/filip.oliva1@ext.csas.cz",
-        help="Base path for the user workspace (default: /Workspace/Users/filip.oliva1@ext.csas.cz)"
-    )
-    
-    args = parser.parse_args()
-    
-    print("=== Databricks Workflow Generator ===")
-    print(f"Workflow Name: {args.workflow_name}")
-    print(f"Folder: {args.folder_name}")
-    print(f"Base Path: {args.base_path}")
-    print("=" * 40)
-    
-    create_workflow(args.workflow_name, args.folder_name, args.base_path)
+# ============================================================================
+# EXECUTE THE SCRIPT
+# ============================================================================
 
+print("=== Databricks Workflow Generator ===")
+print(f"Workflow Name: {workflow_name}")
+print(f"Folder: {folder_name}")
+print(f"Base Path: {base_path}")
+print("=" * 40)
 
-if __name__ == "__main__":
-    main()
+create_workflow(workflow_name, folder_name, base_path)
