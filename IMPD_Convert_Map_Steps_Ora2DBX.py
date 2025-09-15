@@ -551,6 +551,61 @@ print("p_process_key: "+p_process_key)
         
         return sql
     
+    def convert_target_insert_changed_section_notebook(self, sql: str, info: Dict) -> str:
+        """Convert target table insert for changed records - notebook version"""
+        if not sql:
+            return "-- Target insert changed section not found in source SQL"
+            
+        sql = self.convert_schema_names(sql)
+        sql = self.convert_column_names(sql)
+        sql = self.convert_date_functions(sql)
+        sql = self.convert_oracle_joins(sql)
+        sql = sql.replace(info['diff_table_oracle'], '${var.dif_table_name}')
+        
+        # Replace process key numbers specifically
+        sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_INSERT_PROCESS_KEY)', '$p_process_key', sql, flags=re.IGNORECASE)
+        sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_UPDATE_PROCESS_KEY)', '$p_process_key', sql, flags=re.IGNORECASE)
+        
+        # FIXED: Convert ONLY EST_VALID_FROM patterns to use parameter date
+        # Pattern 1: EST_VALID_FROM with YYYYMMDD format
+        sql = re.sub(r"to_date\('(\d{8})','YYYYMMDD'\)\s+as\s+(\w+_VALID_FROM)", 
+                    "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
+        
+        # Pattern 2: EST_VALID_FROM with yyyyMMdd format  
+        sql = re.sub(r"to_date\('(\d{8})','yyyyMMdd'\)\s+as\s+(\w+_VALID_FROM)", 
+                    "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
+        
+        # Pattern 3: EST_VALID_FROM with ddMMyyyy format
+        sql = re.sub(r"to_date\('(\d{8})','ddMMyyyy'\)\s+as\s+(\w+_VALID_FROM)", 
+                    "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
+        
+        # Pattern 4: EST_VALID_FROM with yyyy-MM-dd format (already in correct format, just replace the date)
+        sql = re.sub(r"to_date\('(\d{4}-\d{2}-\d{2})','yyyy-MM-dd'\)\s+as\s+(\w+_VALID_FROM)", 
+                    "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
+        
+        # FIXED: Convert EST_VALID_TO patterns to use far future date (3000-01-01)
+        # Pattern 1: EST_VALID_TO with YYYYMMDD format (30000101)
+        sql = re.sub(r"to_date\('30000101','YYYYMMDD'\)\s+as\s+(\w+_VALID_TO)", 
+                    "to_date('3000-01-01','yyyy-MM-dd') as \\1", sql, flags=re.IGNORECASE)
+        
+        # Pattern 2: EST_VALID_TO with yyyyMMdd format  
+        sql = re.sub(r"to_date\('30000101','yyyyMMdd'\)\s+as\s+(\w+_VALID_TO)", 
+                    "to_date('3000-01-01','yyyy-MM-dd') as \\1", sql, flags=re.IGNORECASE)
+        
+        # Pattern 3: EST_VALID_TO with ddMMyyyy format (01013000)
+        sql = re.sub(r"to_date\('01013000','ddMMyyyy'\)\s+as\s+(\w+_VALID_TO)", 
+                    "to_date('3000-01-01','yyyy-MM-dd') as \\1", sql, flags=re.IGNORECASE)
+        
+        # Pattern 4: EST_VALID_TO without AS clause
+        sql = re.sub(r"to_date\('30000101','YYYYMMDD'\)", 
+                    "to_date('3000-01-01','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
+        sql = re.sub(r"to_date\('30000101','yyyyMMdd'\)", 
+                    "to_date('3000-01-01','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
+        sql = re.sub(r"to_date\('01013000','ddMMyyyy'\)", 
+                    "to_date('3000-01-01','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
+        
+        return sql
+
     def convert_target_update_section_notebook(self, sql: str, info: Dict) -> str:
         """Convert target table update section - notebook version"""
         if not sql:
@@ -567,6 +622,7 @@ print("p_process_key: "+p_process_key)
         sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_UPDATE_PROCESS_KEY|\s*,?\s*$)', '$p_process_key', sql, flags=re.IGNORECASE)
         
         # FIXED: Convert EST_VALID_TO date patterns to use parameter with consistent format
+        # This is for closing old records, so EST_VALID_TO should be set to p_load_date - 1
         # Pattern 1: Handle YYYYMMDD format dates in EST_VALID_TO assignments
         sql = re.sub(r"(\w+_VALID_TO)\s*=\s*to_date\('\d{8}','YYYYMMDD'\)\s*-\s*1", 
                     r"\1 = to_date('$p_load_date','yyyy-MM-dd')-1", sql, flags=re.IGNORECASE)
@@ -579,47 +635,9 @@ print("p_process_key: "+p_process_key)
         sql = re.sub(r"(\w+_VALID_TO)\s*=\s*to_date\('\d{8}','ddMMyyyy'\)\s*-\s*1", 
                     r"\1 = to_date('$p_load_date','yyyy-MM-dd')-1", sql, flags=re.IGNORECASE)
         
-        return sql
-
-    def convert_target_insert_changed_section_notebook(self, sql: str, info: Dict) -> str:
-        """Convert target table insert for changed records - notebook version"""
-        if not sql:
-            return "-- Target insert changed section not found in source SQL"
-            
-        sql = self.convert_schema_names(sql)
-        sql = self.convert_column_names(sql)
-        sql = self.convert_date_functions(sql)
-        sql = self.convert_oracle_joins(sql)
-        sql = sql.replace(info['diff_table_oracle'], '${var.dif_table_name}')
-        
-        # Replace process key numbers specifically
-        sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_INSERT_PROCESS_KEY)', '$p_process_key', sql, flags=re.IGNORECASE)
-        sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_UPDATE_PROCESS_KEY)', '$p_process_key', sql, flags=re.IGNORECASE)
-        
-        # FIXED: Convert ALL load date patterns for EST_VALID_FROM - multiple formats
-        # Pattern 1: YYYYMMDD format
-        sql = re.sub(r"to_date\('(\d{8})','YYYYMMDD'\)\s+as\s+(\w+_VALID_FROM)", 
-                    "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
-        
-        # Pattern 2: yyyyMMdd format  
-        sql = re.sub(r"to_date\('(\d{8})','yyyyMMdd'\)\s+as\s+(\w+_VALID_FROM)", 
-                    "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
-        
-        # Pattern 3: ddMMyyyy format
-        sql = re.sub(r"to_date\('(\d{8})','ddMMyyyy'\)\s+as\s+(\w+_VALID_FROM)", 
-                    "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
-        
-        # Pattern 4: yyyy-MM-dd format (already in correct format, just replace the date)
-        sql = re.sub(r"to_date\('(\d{4}-\d{2}-\d{2})','yyyy-MM-dd'\)\s+as\s+(\w+_VALID_FROM)", 
-                    "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
-        
-        # Pattern 5: Handle direct date assignments (without AS clause)
-        sql = re.sub(r"to_date\('(\d{8})','YYYYMMDD'\)", 
-                    "to_date('$p_load_date','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
-        sql = re.sub(r"to_date\('(\d{8})','yyyyMMdd'\)", 
-                    "to_date('$p_load_date','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
-        sql = re.sub(r"to_date\('(\d{8})','ddMMyyyy'\)", 
-                    "to_date('$p_load_date','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
+        # Pattern 4: Handle yyyy-MM-dd format dates in EST_VALID_TO assignments
+        sql = re.sub(r"(\w+_VALID_TO)\s*=\s*to_date\('\d{4}-\d{2}-\d{2}','yyyy-MM-dd'\)\s*-\s*1", 
+                    r"\1 = to_date('$p_load_date','yyyy-MM-dd')-1", sql, flags=re.IGNORECASE)
         
         return sql 
 
@@ -658,33 +676,46 @@ print("p_process_key: "+p_process_key)
         sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_INSERT_PROCESS_KEY)', '$p_process_key', sql, flags=re.IGNORECASE)
         sql = re.sub(r'\b\d{7,8}\b(?=\s+as\s+\w+_UPDATE_PROCESS_KEY)', '$p_process_key', sql, flags=re.IGNORECASE)
         
-        # FIXED: Convert ALL load date patterns for EST_VALID_FROM - multiple formats
-        # Pattern 1: YYYYMMDD format
+        # FIXED: Convert ONLY EST_VALID_FROM patterns to use parameter date
+        # Pattern 1: EST_VALID_FROM with YYYYMMDD format
         sql = re.sub(r"to_date\('(\d{8})','YYYYMMDD'\)\s+as\s+(\w+_VALID_FROM)", 
                     "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
         
-        # Pattern 2: yyyyMMdd format  
+        # Pattern 2: EST_VALID_FROM with yyyyMMdd format  
         sql = re.sub(r"to_date\('(\d{8})','yyyyMMdd'\)\s+as\s+(\w+_VALID_FROM)", 
                     "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
         
-        # Pattern 3: ddMMyyyy format
+        # Pattern 3: EST_VALID_FROM with ddMMyyyy format
         sql = re.sub(r"to_date\('(\d{8})','ddMMyyyy'\)\s+as\s+(\w+_VALID_FROM)", 
                     "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
         
-        # Pattern 4: yyyy-MM-dd format (already in correct format, just replace the date)
+        # Pattern 4: EST_VALID_FROM with yyyy-MM-dd format (already in correct format, just replace the date)
         sql = re.sub(r"to_date\('(\d{4}-\d{2}-\d{2})','yyyy-MM-dd'\)\s+as\s+(\w+_VALID_FROM)", 
                     "to_date('$p_load_date','yyyy-MM-dd') as \\2", sql, flags=re.IGNORECASE)
         
-        # Pattern 5: Handle direct date assignments (without AS clause)
-        sql = re.sub(r"to_date\('(\d{8})','YYYYMMDD'\)", 
-                    "to_date('$p_load_date','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
-        sql = re.sub(r"to_date\('(\d{8})','yyyyMMdd'\)", 
-                    "to_date('$p_load_date','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
-        sql = re.sub(r"to_date\('(\d{8})','ddMMyyyy'\)", 
-                    "to_date('$p_load_date','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
+        # FIXED: Convert EST_VALID_TO patterns to use far future date (3000-01-01)
+        # Pattern 1: EST_VALID_TO with YYYYMMDD format (30000101)
+        sql = re.sub(r"to_date\('30000101','YYYYMMDD'\)\s+as\s+(\w+_VALID_TO)", 
+                    "to_date('3000-01-01','yyyy-MM-dd') as \\1", sql, flags=re.IGNORECASE)
+        
+        # Pattern 2: EST_VALID_TO with yyyyMMdd format  
+        sql = re.sub(r"to_date\('30000101','yyyyMMd'\)\s+as\s+(\w+_VALID_TO)", 
+                    "to_date('3000-01-01','yyyy-MM-dd') as \\1", sql, flags=re.IGNORECASE)
+        
+        # Pattern 3: EST_VALID_TO with ddMMyyyy format (01013000)
+        sql = re.sub(r"to_date\('01013000','ddMMyyyy'\)\s+as\s+(\w+_VALID_TO)", 
+                    "to_date('3000-01-01','yyyy-MM-dd') as \\1", sql, flags=re.IGNORECASE)
+        
+        # Pattern 4: EST_VALID_TO without AS clause
+        sql = re.sub(r"to_date\('30000101','YYYYMMDD'\)", 
+                    "to_date('3000-01-01','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
+        sql = re.sub(r"to_date\('30000101','yyyyMMdd'\)", 
+                    "to_date('3000-01-01','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
+        sql = re.sub(r"to_date\('01013000','ddMMyyyy'\)", 
+                    "to_date('3000-01-01','yyyy-MM-dd')", sql, flags=re.IGNORECASE)
         
         return sql
-    
+
     def generate_validation_section_notebook(self, info: Dict) -> str:
         """Generate validation queries - notebook version"""
         xc_table = info.get('xc_table', 'XC_UNKNOWN')
@@ -835,8 +866,8 @@ def main():
     
     # Configuration - Update these paths as needed
     BASE_VOLUME_PATH = "/Volumes/cis_personal_catalog/filip_oliva1/Work"
-    INPUT_DIR = os.path.join(BASE_VOLUME_PATH, "Import_DWHP/SMA")
-    OUTPUT_DIR = os.path.join(BASE_VOLUME_PATH, "Export_Map_Notebooks/SMA")
+    INPUT_DIR = os.path.join(BASE_VOLUME_PATH, "Import_DWHP/RDS")
+    OUTPUT_DIR = os.path.join(BASE_VOLUME_PATH, "Export_Map_Notebooks/RDS")
     
     DEFAULT_LOAD_DATE = "2025-08-31"
     OUTPUT_FORMAT = "notebook"  # Only notebook format supported in this version
