@@ -52,7 +52,7 @@ def batch_import_notebooks(source_dir, target_folder, overwrite=True, tag_value=
 
 # Usage with overwrite enabled:
 batch_import_notebooks(
-    source_dir="/Volumes/cis_personal_catalog/filip_oliva1/work/Export_Map_Notebooks",
+    source_dir="/Volumes/cis_personal_catalog/filip_oliva1/work/Export_Map_Notebooks/RDS",
     target_folder="/Users/filip.oliva1@ext.csas.cz/ADS",
     overwrite=True
 )

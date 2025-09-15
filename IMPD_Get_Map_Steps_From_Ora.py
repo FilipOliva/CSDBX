@@ -41,7 +41,7 @@ def get_oracle_credentials():
 oracle_config = get_oracle_credentials()
 
 # Output directory in DBFS for generated SQL files
-output_dir = "/Volumes/cis_personal_catalog/filip_oliva1/Work/Import_DWHP/"
+output_dir = "/Volumes/cis_personal_catalog/filip_oliva1/Work/Import_DWHP/SMA"
 
 # ETL Mappings to process - easy to maintain and modify
 MAPPING_LIST = [
@@ -82,7 +82,9 @@ MAPPING_LIST = [
     'ADS_RDS_EVENT_TYPES_IDENTIFICATIONACTION',
     'ADS_RDS_EVENT_TYPES_ONB_PROCESSSTATE',
     'ADS_RDS_EVENT_TYPES_CONDITIONS',
-    'ADS_RDS_EVENT_TYPES_MEP'
+    'ADS_RDS_EVENT_TYPES_MEP',
+    'ADS_RDS_CASE_OBJECT_STATUS_DISTRAINT_STATE',
+    'ADS_RDS_EVENT_STATUS_ONB_PRODUCTRESULT'
 ]
 
 # =============================================================================

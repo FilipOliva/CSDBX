@@ -40,5 +40,56 @@ event_types: 6,494
 event_types_src: 7,441
 prod_inst_cases: 17,289,829
 status_reason: 17,277
+
+==================================================
+Completed
+Counting records in gap_catalog.ads_etl_owner
+==================================================
+ads_rds_event_status_analytical: 0
+dlk_ads_lov_rds_analyticaleventstatus: 106
+dlk_ads_lov_rds_analyticaleventtypes: 0
+dlk_ads_lov_rds_conditionfulfillmentevent: 0
+dlk_ads_lov_rds_dispotransactiontype: 0
+dlk_ads_lov_rds_distraintactstate: 0
+dlk_ads_lov_rds_distraintacttype: 0
+dlk_ads_lov_rds_distrainteventtype: 0
+dlk_ads_lov_rds_distraintstate: 0
+dlk_ads_lov_rds_errormessagebs: 0
+dlk_ads_lov_rds_humantaskeventtype: 0
+dlk_ads_lov_rds_identificationaction: 0
+dlk_ads_lov_rds_identityregistrationaction: 0
+dlk_ads_lov_rds_identityregistrationcasestates: 0
+dlk_ads_lov_rds_mepoperationstate: 0
+dlk_ads_lov_rds_mepoperationtype: 0
+dlk_ads_lov_rds_personidentificationstate: 0
+dlk_ads_lov_rds_sendnotificationstatus: 0
+dlk_ads_rds_onboardingeligibilitycheckresult: 0
+dlk_ads_rds_onboardingidentificationresult: 0
+dlk_ads_rds_onboardingprocessresult: 0
+dlk_ads_rds_onboardingprocessstate: 0
+dlk_ads_rds_onboardingproductresult: 0
+xc_rds_case_object_status_distraint_state: 0
+xc_rds_event_status_analytical: 53
+xc_rds_event_status_distraint_act_state: 0
+xc_rds_event_status_errormessagebs: 0
+xc_rds_event_status_identif_state: 0
+xc_rds_event_status_main: 0
+xc_rds_event_status_mep: 0
+xc_rds_event_status_onb_eligibilitycheckresult: 0
+xc_rds_event_status_onb_identificationresult: 0
+xc_rds_event_status_onb_processresult: 0
+xc_rds_event_status_onb_productresult: 0
+xc_rds_event_status_reg_state: 0
+xc_rds_event_types_conditions: 0
+xc_rds_event_types_dispotransactiontype: 0
+xc_rds_event_types_distraint_act_type: 0
+xc_rds_event_types_distraint_event_type: 0
+xc_rds_event_types_errormessagebs: 0
+xc_rds_event_types_hypo: 0
+xc_rds_event_types_identificationaction: 0
+xc_rds_event_types_main: 0
+xc_rds_event_types_mep: 0
+xc_rds_event_types_onb_processstate: 0
+xc_rds_event_types_registrationaction: 0
 ==================================================
 Completed

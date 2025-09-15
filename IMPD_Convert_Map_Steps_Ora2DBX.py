@@ -140,10 +140,10 @@ class OracleToDatabricsConverter:
         diff_table_match = re.search(r'create\s+table\s+(diff_\w+)', sql_content, re.IGNORECASE)
         if diff_table_match:
             info['diff_table_oracle'] = diff_table_match.group(1)
-            info['diff_table_name'] = f"gap_catalog.ads_owner.{diff_table_match.group(1).upper()}"
+            info['diff_table_name'] = f"gap_catalog.ads_etl_owner.{diff_table_match.group(1).upper()}"
         else:
             info['diff_table_oracle'] = f"diff_{info['mapping_name']}_ads_map_scd_diff"
-            info['diff_table_name'] = f"gap_catalog.ads_owner.DIFF_{info['mapping_name']}"
+            info['diff_table_name'] = f"gap_catalog.ads_etl_owner.DIFF_{info['mapping_name']}"
         
         # Extract target table info from diff table definition
         diff_table_match = re.search(r'create\s+table\s+\w+.*?(\w+_KEY)\s+INTEGER', 
@@ -486,7 +486,7 @@ print("p_process_key: "+p_process_key)
         """Convert DIFF table creation for notebook"""
         if not sql:
             # Generate a default DIFF table if not found
-            databricks_table_name = info.get('diff_table_name', f"gap_catalog.ads_owner.DIFF_{info.get('mapping_name', 'UNKNOWN')}")
+            databricks_table_name = info.get('diff_table_name', f"gap_catalog.ads_etl_owner.DIFF_{info.get('mapping_name', 'UNKNOWN')}")
             key_col = info.get('key_column', 'EST_KEY')
             
             return f"""CREATE TABLE {databricks_table_name} (
@@ -507,7 +507,7 @@ print("p_process_key: "+p_process_key)
         
         # Replace Oracle table name with Databricks name
         oracle_table_name = info.get('diff_table_oracle', 'diff_table')
-        databricks_table_name = info.get('diff_table_name', 'gap_catalog.ads_owner.diff_table')
+        databricks_table_name = info.get('diff_table_name', 'gap_catalog.ads_etl_owner.diff_table')
         sql = sql.replace(oracle_table_name, databricks_table_name)
         
         # Add auto-increment column with variable reference
@@ -835,8 +835,8 @@ def main():
     
     # Configuration - Update these paths as needed
     BASE_VOLUME_PATH = "/Volumes/cis_personal_catalog/filip_oliva1/Work"
-    INPUT_DIR = os.path.join(BASE_VOLUME_PATH, "Import_DWHP")
-    OUTPUT_DIR = os.path.join(BASE_VOLUME_PATH, "Export_Map_Notebooks")
+    INPUT_DIR = os.path.join(BASE_VOLUME_PATH, "Import_DWHP/SMA")
+    OUTPUT_DIR = os.path.join(BASE_VOLUME_PATH, "Export_Map_Notebooks/SMA")
     
     DEFAULT_LOAD_DATE = "2025-08-31"
     OUTPUT_FORMAT = "notebook"  # Only notebook format supported in this version
@@ -861,10 +861,10 @@ def main():
 # Example usage for individual file conversion
 def convert_single_file_example():
     """Example of converting a single file"""
-    BASE_VOLUME_PATH = "/Volumes/cis_personal_catalog/filip_oliva1/Work/Import_DWHP"
+    BASE_VOLUME_PATH = "/Volumes/cis_personal_catalog/filip_oliva1/Work/Import_DWHP/RDS"
     
-    input_file = os.path.join(BASE_VOLUME_PATH, "IMP_Map_Ora", "ADS_RDS_EVENT_STATUS_ANALYTICAL_NEW.sql")
-    output_file = os.path.join(BASE_VOLUME_PATH, "IMP_Map_DBX_NOTEBOOKS", "ADS_RDS_EVENT_STATUS_ANALYTICAL_DBX.py")
+    input_file = os.path.join(BASE_VOLUME_PATH, "IMP_Map_Ora", "xxx_NEW.sql")
+    output_file = os.path.join(BASE_VOLUME_PATH, "IMP_Map_DBX_NOTEBOOKS", "xxx_DBX.py")
     
     convert_file_in_volume(
         input_file=input_file,
