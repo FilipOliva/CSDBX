@@ -4,15 +4,6 @@ case_object_status: 2
 case_phase_property_types: 1,645,473
 case_status: 3,194
 case_types: 22,494
-diff_ads_rds_event_status_analytical: 0
-diff_ads_rds_event_status_analytical_ads_map_scd_diff: 38
-diff_ads_rds_event_status_distraint_act_state_ads_map_scd_diff: 0
-diff_ads_rds_event_status_mep_ads_map_scd_diff: 0
-diff_ads_rds_event_types_conditions_ads_map_scd_diff: 0
-diff_ads_rds_event_types_dispotransactiontype_ads_map_scd_diff: 0
-diff_ads_rds_event_types_errormessagebs_ads_map_scd_diff: 0
-diff_ads_rds_event_types_main_ads_map_scd_diff: 0
-diff_ads_rds_event_types_mep_ads_map_scd_diff: 0
 dlk_ads_lov_rds_analyticaleventstatus: 526
 dlk_ads_lov_rds_analyticaleventtypes: 3,836
 dlk_ads_lov_rds_conditionfulfillmentevent: 56
@@ -35,41 +26,48 @@ dlk_ads_rds_onboardingidentificationresult: 26
 dlk_ads_rds_onboardingprocessresult: 16
 dlk_ads_rds_onboardingprocessstate: 86
 dlk_ads_rds_onboardingproductresult: 46
-event_status: 16,648
-event_types: 6,494
+event_status: 15,818
+event_types: 6,523
 event_types_src: 7,441
 prod_inst_cases: 17,289,829
 status_reason: 17,277
+==================================================
+Completed
 
 ==================================================
 Completed
 Counting records in gap_catalog.ads_etl_owner
 ==================================================
 ads_rds_event_status_analytical: 0
-dlk_ads_lov_rds_analyticaleventstatus: 106
-dlk_ads_lov_rds_analyticaleventtypes: 0
-dlk_ads_lov_rds_conditionfulfillmentevent: 0
-dlk_ads_lov_rds_dispotransactiontype: 0
-dlk_ads_lov_rds_distraintactstate: 0
-dlk_ads_lov_rds_distraintacttype: 0
-dlk_ads_lov_rds_distrainteventtype: 0
-dlk_ads_lov_rds_distraintstate: 0
-dlk_ads_lov_rds_errormessagebs: 0
-dlk_ads_lov_rds_humantaskeventtype: 0
-dlk_ads_lov_rds_identificationaction: 0
-dlk_ads_lov_rds_identityregistrationaction: 0
-dlk_ads_lov_rds_identityregistrationcasestates: 0
-dlk_ads_lov_rds_mepoperationstate: 0
-dlk_ads_lov_rds_mepoperationtype: 0
-dlk_ads_lov_rds_personidentificationstate: 0
-dlk_ads_lov_rds_sendnotificationstatus: 0
-dlk_ads_rds_onboardingeligibilitycheckresult: 0
-dlk_ads_rds_onboardingidentificationresult: 0
-dlk_ads_rds_onboardingprocessresult: 0
-dlk_ads_rds_onboardingprocessstate: 0
-dlk_ads_rds_onboardingproductresult: 0
+diff_ads_rds_event_status_analytical_ads_map_scd_diff: 0
+diff_ads_rds_event_status_reg_state_ads_map_scd_diff: 3
+diff_ads_rds_event_types_identificationaction_ads_map_scd_diff: 0
+diff_ads_rds_event_types_mep_ads_map_scd_diff: 0
+diff_ads_rds_event_types_registrationaction_ads_map_scd_diff: 29
+dlk_ads_lov_rds_analyticaleventstatus: 0
+dlk_ads_lov_rds_analyticaleventtypes: 3,836
+dlk_ads_lov_rds_conditionfulfillmentevent: 56
+dlk_ads_lov_rds_dispotransactiontype: 1,372
+dlk_ads_lov_rds_distraintactstate: 84
+dlk_ads_lov_rds_distraintacttype: 319
+dlk_ads_lov_rds_distrainteventtype: 129
+dlk_ads_lov_rds_distraintstate: 154
+dlk_ads_lov_rds_errormessagebs: 5,987
+dlk_ads_lov_rds_humantaskeventtype: 519
+dlk_ads_lov_rds_identificationaction: 279
+dlk_ads_lov_rds_identityregistrationaction: 444
+dlk_ads_lov_rds_identityregistrationcasestates: 114
+dlk_ads_lov_rds_mepoperationstate: 232
+dlk_ads_lov_rds_mepoperationtype: 512
+dlk_ads_lov_rds_personidentificationstate: 144
+dlk_ads_lov_rds_sendnotificationstatus: 39
+dlk_ads_rds_onboardingeligibilitycheckresult: 36
+dlk_ads_rds_onboardingidentificationresult: 26
+dlk_ads_rds_onboardingprocessresult: 16
+dlk_ads_rds_onboardingprocessstate: 86
+dlk_ads_rds_onboardingproductresult: 46
 xc_rds_case_object_status_distraint_state: 0
-xc_rds_event_status_analytical: 53
+xc_rds_event_status_analytical: 0
 xc_rds_event_status_distraint_act_state: 0
 xc_rds_event_status_errormessagebs: 0
 xc_rds_event_status_identif_state: 0
@@ -79,7 +77,7 @@ xc_rds_event_status_onb_eligibilitycheckresult: 0
 xc_rds_event_status_onb_identificationresult: 0
 xc_rds_event_status_onb_processresult: 0
 xc_rds_event_status_onb_productresult: 0
-xc_rds_event_status_reg_state: 0
+xc_rds_event_status_reg_state: 7
 xc_rds_event_types_conditions: 0
 xc_rds_event_types_dispotransactiontype: 0
 xc_rds_event_types_distraint_act_type: 0
@@ -90,6 +88,6 @@ xc_rds_event_types_identificationaction: 0
 xc_rds_event_types_main: 0
 xc_rds_event_types_mep: 0
 xc_rds_event_types_onb_processstate: 0
-xc_rds_event_types_registrationaction: 0
+xc_rds_event_types_registrationaction: 29
 ==================================================
 Completed

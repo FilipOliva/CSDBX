@@ -869,11 +869,11 @@ def main():
     INPUT_DIR = os.path.join(BASE_VOLUME_PATH, "Import_DWHP/RDS")
     OUTPUT_DIR = os.path.join(BASE_VOLUME_PATH, "Export_Map_Notebooks/RDS")
     
-    DEFAULT_LOAD_DATE = "2025-08-31"
+    DEFAULT_LOAD_DATE = "2025-08-14"
     OUTPUT_FORMAT = "notebook"  # Only notebook format supported in this version
     
     print("=" * 60)
-    print("Oracle to Databricks SCD2 Pattern Converter - DATABRICKS VERSION")
+    print("Oracle to Databricks Pattern Converter - DATABRICKS VERSION")
     print("=" * 60)
     print(f"Base Volume Path: {BASE_VOLUME_PATH}")
     print(f"Input Directory: {INPUT_DIR}")

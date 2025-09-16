@@ -1,13 +1,29 @@
-RDS - Navod nas spouštění
+-- Dostupne datumy v DLK pro RDS
+2025-08-14
+2025-08-15
+2025-08-16
+2025-08-17
+---------------------------------------------- RDS Steps -----------------------------------------------------
 
 1. Načtení SQL steps z Oracle logů
 Spustit: /Workspace/Users/filip.oliva1@ext.csas.cz/CSDBX/IMPD_Get_Map_Steps_From_Ora.py
 Konfigurace: Možnost upravit list mapování
+Výstup: SQL files uloženy do /Volumes/cis_personal_catalog/filip_oliva1/work/Import_DWHP/
 
+2. Transformace Oracle SQL do DBX
+Spustit: /Workspace/Users/filip.oliva1@ext.csas.cz/CSDBX/IMPD_Convert_Map_Steps_Ora2DBX.py
+Konfigurace: Ve funkci main () jsou parametry DEFAULT_LOAD_DATE, OUTPUT_DIR, INPUT_DIR, 
+Výstup: Python notebook files uloženy do /Volumes/cis_personal_catalog/filip_oliva1/work/Export_Map_Notebooks/
 
--- Dostupne datumy v DLK
-2025-08-13T22:00:00.000+00:00
-2025-08-14T22:00:00.000+00:00
-2025-08-15T22:00:00.000+00:00
-2025-08-16T22:00:00.000+00:00
-2025-08-17T22:00:00.000+00:00
+3. Create Notebooks
+Spustit: /Workspace/Users/filip.oliva1@ext.csas.cz/CSDBX/Create_MAP_Notebooks.py
+Konfigurace: source_dir a target_folder
+Výstup: Vytvoří notebooky v Target folderu
+
+---------------------------------------------- FIXED --------------------------------------------------------
+MAP_ADS_RDS_EVENT_TYPES_ERRORMESSAGEBS_DBX -- ručně opraven REGEXP_REPLACE(FILTER_A.ID, 'SCOPE.', '')
+
+---------------------------------------------- TO-DO --------------------------------------------------------
+ADS_RDS_CASE_OBJECT_STATUS_DISTRAINT_STATE -- opravit v generatoru "...FROM gap_catalog.ads_owner.cos"
+MAP_ADS_RDS_EVENT_STATUS_ONB_PRODUCTRESULT -- funkce "ads_lib_etl_owner.MAP_STD.get_std_code_fn(CDM.value)"
+MAP_ADS_RDS_EVENT_STATUS_ONB_IDENTIFICATIONRESULT_DBX -- unkce "ads_lib_etl_owner.MAP_STD.get_std_code_fn(CDM.value)"
