@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC ## Copy DLK Tables from ads_owner to ads_etl_owner
+# MAGIC ## Refresh DLK Tables from ads_owner to ads_etl_owner
 # MAGIC - Purpose: Clean and copy all DLK tables between schemas
 # MAGIC - Author: Data Engineer  
 # MAGIC - Date: 2025-09-15

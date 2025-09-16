@@ -1,5 +1,10 @@
 RDS - Navod nas spouštění
 
+1. Načtení SQL steps z Oracle logů
+Spustit: /Workspace/Users/filip.oliva1@ext.csas.cz/CSDBX/IMPD_Get_Map_Steps_From_Ora.py
+Konfigurace: Možnost upravit list mapování
+
+
 -- Dostupne datumy v DLK
 2025-08-13T22:00:00.000+00:00
 2025-08-14T22:00:00.000+00:00
