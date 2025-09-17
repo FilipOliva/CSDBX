@@ -26,6 +26,9 @@ workflow_name = "ADS_RDS"
 # Option 2: Use specific Job ID (if known)
 job_id = None  # Set to specific job ID like 12345, or None to search by name
 
+# Option 3: Number of recent runs to show (configurable)
+recent_runs_limit = 6  # Default is 6, can be changed as needed
+
 # ============================================================================
 
 
@@ -172,9 +175,9 @@ def list_workflow_tasks(job_details):
                 print(f"    Libraries: {', '.join(lib_types)}")
 
 
-def get_workflow_runs(w: WorkspaceClient, job_id: int, limit: int = 5):
+def get_workflow_runs(w: WorkspaceClient, job_id: int, limit: int = 6):
     """
-    Get recent workflow runs
+    Get recent workflow runs with individual task runtimes
     
     Args:
         w: WorkspaceClient instance
@@ -230,10 +233,62 @@ def get_workflow_runs(w: WorkspaceClient, job_id: int, limit: int = 5):
                 else:
                     duration = run.end_time - run.start_time
                     print(f"    Duration: {duration}")
+            
+            # Get individual task runtimes for this run
+            get_task_runtimes(w, run.run_id)
             print()
             
     except Exception as e:
         print(f"✗ Error getting workflow runs: {e}")
+
+
+def get_task_runtimes(w: WorkspaceClient, run_id: int):
+    """
+    Get individual task runtimes for a specific workflow run
+    
+    Args:
+        w: WorkspaceClient instance
+        run_id: Run ID to get task details for
+    """
+    try:
+        # Get the run details which includes task information
+        run_details = w.jobs.get_run(run_id)
+        
+        if not run_details.tasks:
+            print("    No task details available")
+            return
+        
+        print("    Individual Task Runtimes:")
+        
+        from datetime import datetime
+        
+        # Sort tasks by start time or task key for consistent ordering
+        sorted_tasks = sorted(run_details.tasks, key=lambda x: (x.start_time or 0, x.task_key))
+        
+        for task in sorted_tasks:
+            task_status = task.state.life_cycle_state if task.state else "Unknown"
+            task_result = task.state.result_state if task.state and task.state.result_state else "N/A"
+            
+            # Calculate task duration
+            if task.start_time and task.end_time:
+                if isinstance(task.start_time, int) and isinstance(task.end_time, int):
+                    task_duration_ms = task.end_time - task.start_time
+                    task_duration_seconds = task_duration_ms / 1000
+                    task_hours = int(task_duration_seconds // 3600)
+                    task_minutes = int((task_duration_seconds % 3600) // 60)
+                    task_secs = int(task_duration_seconds % 60)
+                    duration_str = f"{task_hours:02d}:{task_minutes:02d}:{task_secs:02d}"
+                else:
+                    duration_str = str(task.end_time - task.start_time)
+            elif task.start_time and not task.end_time:
+                duration_str = "Running..."
+            else:
+                duration_str = "N/A"
+            
+            print(f"      • {task.task_key}: {duration_str} ({task_status}/{task_result})")
+            
+    except Exception as e:
+        print(f"      ✗ Error getting task runtimes: {e}")
 
 
 def list_workflow_tasks_main(workflow_name: str = None, job_id: int = None):
@@ -273,7 +328,7 @@ def list_workflow_tasks_main(workflow_name: str = None, job_id: int = None):
     list_workflow_tasks(job_details)
     
     # Show recent runs
-    get_workflow_runs(w, job_details.job_id)
+    get_workflow_runs(w, job_details.job_id, recent_runs_limit)
 
 
 # ============================================================================
