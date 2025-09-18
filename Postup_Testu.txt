@@ -1,8 +1,26 @@
 -- Dostupne datumy v DLK pro RDS
-2025-08-14
+2025-08-14 
 2025-08-15
 2025-08-16
 2025-08-17
+2025-08-18 ?
+
+ProcessKey: <YYYYMMDD><Cluster_Size><RunNumber>
+
+
+tohle jsou ty L0 naplněné daty z snow DLK za několik eff_date, upravil jsem tam  pár řádků, tímhle paternem:
+select SYS_EFFECTIVE_DATE, max(entryorder) from ADS.L_IN_ADS.DLK_ADS_LOV_RDS_MEPOPERATIONTYPE group by SYS_EFFECTIVE_DATE
+ 
+delete from ADS.L_IN_ADS.DLK_ADS_LOV_RDS_MEPOPERATIONTYPE  
+where SYS_EFFECTIVE_DATE in ( cast('2025-08-14' as date) ,  cast('2025-08-16' as date) )
+and entryorder = 26;
+ 
+ 
+update ADS.L_IN_ADS.DLK_ADS_LOV_RDS_MEPOPERATIONTYPE  
+set VALUE = 'TEST_VIVANTI'
+where SYS_EFFECTIVE_DATE in ( cast('2025-08-15' as date)  )
+and entryorder = 25;
+
 ---------------------------------------------- RDS Steps -----------------------------------------------------
 
 1. Načtení SQL steps z Oracle logů
@@ -25,11 +43,9 @@ MAP_ADS_RDS_EVENT_TYPES_ERRORMESSAGEBS_DBX -- ručně opraven REGEXP_REPLACE(FIL
 ADS_RDS_EVENT_TYPES_ONB_PROCESSSTATE -- opraveno na gap_catalog.ads_etl_owner.get_std_code_fn, prefix cdm. a bra.
 ADS_RDS_EVENT_STATUS_ONB_IDENTIFICATIONRESULT -- opraveno na gap_catalog.ads_etl_owner.get_std_code_fn, prefix cdm. a bra.
 MAP_ADS_RDS_EVENT_STATUS_ONB_IDENTIFICATIONRESULT_DBX -- - opraveno na gap_catalog.ads_etl_owner.get_std_code_fn, prefix cdm. a bra.
+MAP_ADS_RDS_EVENT_STATUS_ONB_PRODUCTRESULT -- funkce "ads_lib_etl_owner.MAP_STD.get_std_code_fn(CDM.value)"
 ...
 ADS_RDS_EVENT_STATUS_ONB_ELIGIBILITYCHECKRESULT -- opraveno na gap_catalog.ads_etl_owner.get_std_code_fn, prefix cdm. a bra.
 ADS_RDS_EVENT_STATUS_MAIN -- ručně opraveno "FROM DUAL"
+ADS_RDS_CASE_OBJECT_STATUS_DISTRAINT_STATE -- opravit v generatoru "...FROM gap_catalog.ads_owner.cos" + remove sequence
 
----------------------------------------------- TO-DO --------------------------------------------------------
-ADS_RDS_CASE_OBJECT_STATUS_DISTRAINT_STATE -- opravit v generatoru "...FROM gap_catalog.ads_owner.cos"
-MAP_ADS_RDS_EVENT_STATUS_ONB_PRODUCTRESULT -- funkce "ads_lib_etl_owner.MAP_STD.get_std_code_fn(CDM.value)"
- -- funkce "ads_lib_etl_owner.MAP_STD.get_std_code_fn(CDM.value)"
