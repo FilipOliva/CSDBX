@@ -3,23 +3,19 @@
 2025-08-15
 2025-08-16
 2025-08-17
-2025-08-18 ?
+2025-08-18
 
-ProcessKey: <YYYYMMDD><Cluster_Size><RunNumber>
+-- Dostupne datumy v DLK pro SMA
 
 
-tohle jsou ty L0 naplněné daty z snow DLK za několik eff_date, upravil jsem tam  pár řádků, tímhle paternem:
-select SYS_EFFECTIVE_DATE, max(entryorder) from ADS.L_IN_ADS.DLK_ADS_LOV_RDS_MEPOPERATIONTYPE group by SYS_EFFECTIVE_DATE
- 
-delete from ADS.L_IN_ADS.DLK_ADS_LOV_RDS_MEPOPERATIONTYPE  
-where SYS_EFFECTIVE_DATE in ( cast('2025-08-14' as date) ,  cast('2025-08-16' as date) )
-and entryorder = 26;
- 
- 
-update ADS.L_IN_ADS.DLK_ADS_LOV_RDS_MEPOPERATIONTYPE  
-set VALUE = 'TEST_VIVANTI'
-where SYS_EFFECTIVE_DATE in ( cast('2025-08-15' as date)  )
-and entryorder = 25;
+Format Process_Key: <YYYYMMDD><Cluster_Size><Run_Number>
+<YYYYMMDD> = eff.datum
+<Cluster_Size> = velikost clusteru (1=XS,2=S,3=M)
+<Run_Number> = číslo běhu (nebo jiná custom hodnota pokud bude potřeba), default bude '00'
+Příklad: 20250918100,20250918101 apod.
+
+
+
 
 ---------------------------------------------- RDS Steps -----------------------------------------------------
 
