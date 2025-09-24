@@ -21,7 +21,7 @@ import os
 # ============================================================================
 
 # Option 1: Search by workflow name
-workflow_name = "ADS_RDS"
+workflow_name = "ADS_RDS_Q"
 
 # Option 2: Use specific Job ID (if known)
 job_id = None  # Set to specific job ID like 12345, or None to search by name
@@ -78,21 +78,20 @@ def get_workflow_details(w: WorkspaceClient, job_id: int):
         print(f"✗ Error getting workflow details: {e}")
         return None
 
-
 def list_workflow_tasks(job_details):
     """
     List all tasks in the workflow
-    
+
     Args:
         job_details: Job details object
     """
     if not job_details or not job_details.settings:
         print("✗ No workflow details available")
         return
-    
+
     settings = job_details.settings
     tasks = settings.tasks or []
-    
+
     print(f"\n=== Workflow Details ===")
     print(f"Name: {settings.name}")
     print(f"Job ID: {job_details.job_id}")
@@ -100,64 +99,77 @@ def list_workflow_tasks(job_details):
     print(f"Creator: {job_details.creator_user_name}")
     print(f"Max Concurrent Runs: {settings.max_concurrent_runs}")
     print(f"Timeout: {settings.timeout_seconds} seconds")
-    
+
     if settings.tags:
         print(f"Tags: {dict(settings.tags)}")
-    
+
     print(f"\n=== Tasks ({len(tasks)}) ===")
-    
+
     if not tasks:
         print("No tasks found in this workflow")
         return
-    
+
+    # Initialize workspace client for warehouse lookup
+    w = WorkspaceClient()
+
     # Sort tasks by task_key for better readability
     sorted_tasks = sorted(tasks, key=lambda x: x.task_key)
-    
+
     for i, task in enumerate(sorted_tasks, 1):
         print(f"\n{i:2d}. Task: {task.task_key}")
         print(f"    Description: {task.description or 'No description'}")
-        
+
         # Determine task type and details
         if task.notebook_task:
             print(f"    Type: Notebook")
             print(f"    Path: {task.notebook_task.notebook_path}")
             if task.notebook_task.base_parameters:
                 print(f"    Parameters: {dict(task.notebook_task.base_parameters)}")
-                
+
         elif task.spark_python_task:
             print(f"    Type: Python Script")
             print(f"    File: {task.spark_python_task.python_file}")
             if task.spark_python_task.parameters:
                 print(f"    Parameters: {task.spark_python_task.parameters}")
-                
+
         elif task.sql_task:
             print(f"    Type: SQL")
+            warehouse_id = getattr(task.sql_task, 'warehouse_id', None)
+            warehouse_name = "Unknown"
+            if warehouse_id:
+                try:
+                    warehouse_obj = w.warehouses.get(warehouse_id)
+                    warehouse_name = getattr(warehouse_obj, 'name', 'Unknown')
+                except Exception:
+                    warehouse_name = "Unknown"
+                print(f"    SQL Warehouse ID: {warehouse_id}")
+                print(f"    SQL Warehouse Name: {warehouse_name}")
             if hasattr(task.sql_task, 'query') and task.sql_task.query:
                 print(f"    Query: {task.sql_task.query.query_id if task.sql_task.query else 'N/A'}")
-                
+
         elif task.python_wheel_task:
             print(f"    Type: Python Wheel")
             print(f"    Package: {task.python_wheel_task.package_name}")
             print(f"    Entry Point: {task.python_wheel_task.entry_point}")
-            
+
         elif task.jar_task:
             print(f"    Type: JAR")
             print(f"    Main Class: {task.jar_task.main_class_name}")
-            
+
         else:
             print(f"    Type: Unknown")
-        
+
         # Show dependencies
         if task.depends_on:
             deps = [dep.task_key for dep in task.depends_on]
             print(f"    Depends on: {', '.join(deps)}")
-        
+
         # Show cluster configuration
         if task.existing_cluster_id:
             print(f"    Cluster: {task.existing_cluster_id}")
         elif task.new_cluster:
             print(f"    New Cluster: {task.new_cluster.spark_version}")
-        
+
         # Show libraries
         if task.libraries:
             lib_types = []
@@ -170,7 +182,6 @@ def list_workflow_tasks(job_details):
                     lib_types.append(f"JAR: {lib.jar}")
             if lib_types:
                 print(f"    Libraries: {', '.join(lib_types)}")
-
 
 def get_workflow_runs(w: WorkspaceClient, job_id: int, limit: int = 5):
     """
