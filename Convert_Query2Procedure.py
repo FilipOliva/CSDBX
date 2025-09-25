@@ -135,7 +135,7 @@ class QueryToProcedureConverter:
         return f"sp_{base_name}"
     
     def convert_to_procedure(self, sql_code, procedure_name, parameters, source_sys_origin, target_table):
-        """Convert SQL code to stored procedure format"""
+        """Convert SQL code to stored procedure format with updated logging functions"""
         
         # Create parameter list for procedure signature
         param_list = []
@@ -161,7 +161,7 @@ class QueryToProcedureConverter:
         base_name_for_diff = procedure_name[3:] if procedure_name.startswith('sp_') else procedure_name
         diff_table_name = f"gap_catalog.ads_etl_owner.DIFF_{base_name_for_diff}_ADS_MAP_SCD_DIFF"
         
-        procedure_code = f"""-- Create SQL Procedure for {procedure_name.upper()} ETL Process
+        procedure_code = f"""-- Create SQL Procedure for {base_name_for_diff.upper()} ETL Process
 CREATE OR REPLACE PROCEDURE gap_catalog.ads_etl_owner.{procedure_name}(
 {param_signature}
 )
@@ -172,22 +172,24 @@ AS
 BEGIN
     -- Declare local variables
     DECLARE dif_table_name STRING DEFAULT '{diff_table_name}';
+    DECLARE my_log_id STRING;
     BEGIN
         CALL gap_catalog.log.start_performance_test(
-        test_case_name => 'ADS_RDS_Q',
-        step_name => '{base_name_for_diff}',
-        psource_sys_origin => '{source_sys_origin}',
-        process_key => p_process_key,
-        target_table => '{target_table}',
-        p_load_date => p_load_date
+            test_case_name => 'ADS_RDS_PROC',
+            step_name => '{base_name_for_diff}',
+            psource_sys_origin  => '{source_sys_origin}',
+            process_key => p_process_key,
+            target_table => '{target_table}',
+            log_id => my_log_id,
+            p_load_date => p_load_date
         );
 
 {indented_logic}
 
         CALL gap_catalog.log.complete_performance_test(
-            process_key => p_process_key,
-            pstatus => 'COMPLETED'
+            plog_id => my_log_id
         );
+
     END;
     
 END;"""

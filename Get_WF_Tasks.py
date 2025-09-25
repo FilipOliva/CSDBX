@@ -21,7 +21,7 @@ import os
 # ============================================================================
 
 # Option 1: Search by workflow name
-workflow_name = "ADS_RDS_Q"
+workflow_name = "ADS_RDS_PROC"
 
 # Option 2: Use specific Job ID (if known)
 job_id = None  # Set to specific job ID like 12345, or None to search by name
