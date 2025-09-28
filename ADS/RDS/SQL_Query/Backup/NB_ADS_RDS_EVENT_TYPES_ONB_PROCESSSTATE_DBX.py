@@ -1,0 +1,328 @@
+# Databricks notebook source
+# MAGIC %md
+# MAGIC ## ETL Mapping ADS_RDS_EVENT_TYPES_MEP (Pure SQL Notebook)
+# MAGIC - Converted from Python Notebook to SQL Notebook for SQL Warehouse compatibility
+# MAGIC - Generated date: 2025-09-22
+# MAGIC - No Python dependencies required
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Conversion Notes
+# MAGIC - Converted from Python to pure SQL notebook
+# MAGIC - Compatible with Databricks SQL Warehouse
+# MAGIC - Maintains all SCD2 logic and functionality
+# MAGIC - Uses SQL variables instead of Python widgets
+# MAGIC - Uses IDENTIFIER() for dynamic table names
+
+# COMMAND ----------
+
+# DBTITLE 1,Set Parameters and Variables
+# MAGIC %sql
+# MAGIC DECLARE OR REPLACE VARIABLE p_load_date STRING DEFAULT '2025-08-14';
+# MAGIC DECLARE OR REPLACE VARIABLE p_process_key STRING DEFAULT '13173833';
+# MAGIC DECLARE OR REPLACE VARIABLE map_id STRING DEFAULT 'ADS_RDS_EVENT_TYPES_MEP';
+# MAGIC DECLARE OR REPLACE VARIABLE dif_table_name STRING DEFAULT 'gap_catalog.ads_etl_owner.DIFF_ADS_RDS_EVENT_TYPES_MEP_ADS_MAP_SCD_DIFF';
+# MAGIC DECLARE OR REPLACE VARIABLE max_key BIGINT DEFAULT 0;
+# MAGIC
+# MAGIC -- Get the maximum EVETP_KEY from Target table
+# MAGIC SET VAR max_key = (
+# MAGIC     SELECT COALESCE(MAX(evetp_key), 0) 
+# MAGIC     FROM gap_catalog.ads_owner.event_types
+# MAGIC );
+# MAGIC
+# MAGIC -- Display current maximum key for logging
+# MAGIC -- SELECT 'Parameters set - Load Date: ' || p_load_date || ', Process Key: ' || p_process_key || ', Max Key: ' || max_key as info_message;
+
+# COMMAND ----------
+
+# DBTITLE 1,Truncate XC Table
+# MAGIC %sql
+# MAGIC TRUNCATE TABLE gap_catalog.ads_etl_owner.XC_RDS_EVENT_TYPES_MEP;
+
+# COMMAND ----------
+
+# DBTITLE 1,Fill XC Table
+# MAGIC %sql
+# MAGIC INSERT INTO gap_catalog.ads_etl_owner.XC_RDS_EVENT_TYPES_MEP 
+# MAGIC WITH C_0FILTERALQDR4RF0LLIP1736450PD5NP4 AS (
+# MAGIC     SELECT
+# MAGIC         RDS_MEPOPERATIONTYPE.id AS ID,
+# MAGIC         RDS_MEPOPERATIONTYPE.value AS VALUE
+# MAGIC     FROM gap_catalog.ads_etl_owner.DLK_ADS_LOV_RDS_MEPOPERATIONTYPE RDS_MEPOPERATIONTYPE
+# MAGIC     WHERE RDS_MEPOPERATIONTYPE.sys = 'Brasil'
+# MAGIC         AND RDS_MEPOPERATIONTYPE.lang = 'CZ'
+# MAGIC         AND CAST(from_utc_timestamp(SYS_EFFECTIVE_DATE, 'Europe/Prague') AS DATE) = p_load_date
+# MAGIC )
+# MAGIC SELECT /*+no hint*/
+# MAGIC     /*seznam vkladanych nebo updatovanych sloupcu bez SK, auditnich atributu a deleted flagu*/
+# MAGIC     FILTER_A.ID AS EVETP_SOURCE_ID,
+# MAGIC     'RDS' AS EVETP_SOURCE_SYSTEM_ID,
+# MAGIC     'RDS_MEPOPERATIONTYPE' AS EVETP_SOURCE_SYS_ORIGIN,
+# MAGIC     FILTER_A.VALUE AS EVETP_DESC,
+# MAGIC     FILTER_A.ID AS EVETP_EVENT_TABLE_NAME,
+# MAGIC     'XNA' AS EVETP_TARGET,
+# MAGIC     'XNA' AS EVETP_DATA_PATH,
+# MAGIC     'N' AS EVETP_DELETED_FLAG
+# MAGIC FROM C_0FILTERALQDR4RF0LLIP1736450PD5NP4 FILTER_A
+# MAGIC WHERE 1=1;
+
+# COMMAND ----------
+
+# DBTITLE 1,Cleanup DIFF Table
+# MAGIC %sql
+# MAGIC DROP TABLE IF EXISTS IDENTIFIER(dif_table_name);
+
+# COMMAND ----------
+
+# DBTITLE 1,Create DIFF Table
+# MAGIC %sql
+# MAGIC CREATE TABLE IDENTIFIER(dif_table_name) (
+# MAGIC     tech_del_flg CHAR(1),
+# MAGIC     tech_new_rec CHAR(1),
+# MAGIC     tech_rid VARCHAR(255),
+# MAGIC     EVETP_KEY INTEGER,
+# MAGIC     EVETP_KEY_NEW BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1),
+# MAGIC     EVETP_SOURCE_ID VARCHAR(400),
+# MAGIC     EVETP_SOURCE_SYSTEM_ID VARCHAR(120),
+# MAGIC     EVETP_SOURCE_SYS_ORIGIN VARCHAR(120),
+# MAGIC     EVETP_DESC VARCHAR(4000),
+# MAGIC     EVETP_EVENT_TABLE_NAME VARCHAR(120),
+# MAGIC     EVETP_TARGET VARCHAR(120),
+# MAGIC     EVETP_DATA_PATH VARCHAR(120)
+# MAGIC );
+
+# COMMAND ----------
+
+# DBTITLE 1,Populate DIFF Table - New/Updated Records
+# MAGIC %sql
+# MAGIC INSERT INTO IDENTIFIER(dif_table_name) (
+# MAGIC     tech_del_flg,
+# MAGIC     tech_new_rec,
+# MAGIC     tech_rid,
+# MAGIC     EVETP_KEY,
+# MAGIC     EVETP_SOURCE_ID,
+# MAGIC     EVETP_SOURCE_SYSTEM_ID,
+# MAGIC     EVETP_SOURCE_SYS_ORIGIN,
+# MAGIC     EVETP_DESC,
+# MAGIC     EVETP_EVENT_TABLE_NAME,
+# MAGIC     EVETP_TARGET,
+# MAGIC     EVETP_DATA_PATH
+# MAGIC )
+# MAGIC SELECT 
+# MAGIC     'N' AS tech_del_flg, 
+# MAGIC     CASE WHEN trg.EVETP_SOURCE_ID IS NULL THEN 'Y' ELSE 'N' END AS tech_new_rec,
+# MAGIC     trg.rid AS tech_rid,
+# MAGIC     trg.EVETP_KEY, 
+# MAGIC     src.EVETP_SOURCE_ID, 
+# MAGIC     src.EVETP_SOURCE_SYSTEM_ID, 
+# MAGIC     src.EVETP_SOURCE_SYS_ORIGIN, 
+# MAGIC     src.EVETP_DESC, 
+# MAGIC     src.EVETP_EVENT_TABLE_NAME, 
+# MAGIC     src.EVETP_TARGET, 
+# MAGIC     src.EVETP_DATA_PATH
+# MAGIC FROM (
+# MAGIC     SELECT /*+ full(xc) */
+# MAGIC         EVETP_SOURCE_ID, 
+# MAGIC         EVETP_SOURCE_SYSTEM_ID, 
+# MAGIC         EVETP_SOURCE_SYS_ORIGIN, 
+# MAGIC         EVETP_DESC, 
+# MAGIC         EVETP_EVENT_TABLE_NAME, 
+# MAGIC         EVETP_DELETED_FLAG, 
+# MAGIC         EVETP_TARGET, 
+# MAGIC         EVETP_DATA_PATH
+# MAGIC     FROM gap_catalog.ads_etl_owner.XC_RDS_EVENT_TYPES_MEP xc
+# MAGIC     WHERE EVETP_SOURCE_SYS_ORIGIN = 'RDS_MEPOPERATIONTYPE'
+# MAGIC ) src 
+# MAGIC LEFT JOIN (
+# MAGIC     SELECT 
+# MAGIC         evetp_key||'.'||evetp_valid_from AS rid, 
+# MAGIC         t.* 
+# MAGIC     FROM gap_catalog.ads_owner.EVENT_TYPES t
+# MAGIC     WHERE EVETP_CURRENT_FLAG = 'Y'
+# MAGIC         AND EVETP_VALID_TO = to_date('01013000','ddMMyyyy')
+# MAGIC         AND EVETP_SOURCE_SYS_ORIGIN = 'RDS_MEPOPERATIONTYPE'
+# MAGIC ) trg
+# MAGIC ON trg.EVETP_SOURCE_ID = src.EVETP_SOURCE_ID
+# MAGIC     AND trg.EVETP_SOURCE_SYSTEM_ID = src.EVETP_SOURCE_SYSTEM_ID
+# MAGIC     AND trg.EVETP_SOURCE_SYS_ORIGIN = src.EVETP_SOURCE_SYS_ORIGIN
+# MAGIC     AND trg.EVETP_VALID_TO = to_date('30000101','yyyyMMdd') 
+# MAGIC WHERE (
+# MAGIC     decode(src.EVETP_DESC, trg.EVETP_DESC, 1, 0) = 0 OR
+# MAGIC     decode(src.EVETP_EVENT_TABLE_NAME, trg.EVETP_EVENT_TABLE_NAME, 1, 0) = 0 OR
+# MAGIC     decode(src.EVETP_DELETED_FLAG, trg.EVETP_DELETED_FLAG, 1, 0) = 0 OR
+# MAGIC     decode(src.EVETP_TARGET, trg.EVETP_TARGET, 1, 0) = 0 OR
+# MAGIC     decode(src.EVETP_DATA_PATH, trg.EVETP_DATA_PATH, 1, 0) = 0 OR 
+# MAGIC     trg.EVETP_SOURCE_ID IS NULL
+# MAGIC );
+
+# COMMAND ----------
+
+# DBTITLE 1,Populate DIFF Table - Deleted Records
+# MAGIC %sql
+# MAGIC INSERT INTO IDENTIFIER(dif_table_name) (
+# MAGIC     tech_del_flg,
+# MAGIC     tech_new_rec,
+# MAGIC     tech_rid,
+# MAGIC     EVETP_KEY,
+# MAGIC     EVETP_SOURCE_ID,
+# MAGIC     EVETP_SOURCE_SYSTEM_ID,
+# MAGIC     EVETP_SOURCE_SYS_ORIGIN,
+# MAGIC     EVETP_DESC,
+# MAGIC     EVETP_EVENT_TABLE_NAME,
+# MAGIC     EVETP_TARGET,
+# MAGIC     EVETP_DATA_PATH
+# MAGIC )
+# MAGIC SELECT 
+# MAGIC     'Y' AS tech_del_flg, 
+# MAGIC     'N' AS tech_new_rec, 
+# MAGIC     trg.rid AS tech_rid, 
+# MAGIC     trg.EVETP_KEY, 
+# MAGIC     trg.EVETP_SOURCE_ID, 
+# MAGIC     trg.EVETP_SOURCE_SYSTEM_ID, 
+# MAGIC     trg.EVETP_SOURCE_SYS_ORIGIN, 
+# MAGIC     trg.EVETP_DESC, 
+# MAGIC     trg.EVETP_EVENT_TABLE_NAME, 
+# MAGIC     trg.EVETP_TARGET, 
+# MAGIC     trg.EVETP_DATA_PATH
+# MAGIC FROM (
+# MAGIC     SELECT 
+# MAGIC         evetp_key||'.'||evetp_valid_from AS rid, 
+# MAGIC         t.* 
+# MAGIC     FROM gap_catalog.ads_owner.EVENT_TYPES t
+# MAGIC     WHERE EVETP_CURRENT_FLAG = 'Y' 
+# MAGIC         AND EVETP_DELETED_FLAG = 'N'
+# MAGIC         AND EVETP_VALID_TO = to_date('01013000','ddMMyyyy')
+# MAGIC         AND EVETP_SOURCE_SYS_ORIGIN = 'RDS_MEPOPERATIONTYPE'
+# MAGIC ) trg 
+# MAGIC LEFT JOIN (
+# MAGIC     SELECT /*+ full(xc) */
+# MAGIC         EVETP_SOURCE_ID, 
+# MAGIC         EVETP_SOURCE_SYSTEM_ID, 
+# MAGIC         EVETP_SOURCE_SYS_ORIGIN, 
+# MAGIC         to_date('30000101','yyyyMMdd') AS EVETP_VALID_TO
+# MAGIC     FROM gap_catalog.ads_etl_owner.XC_RDS_EVENT_TYPES_MEP xc
+# MAGIC     WHERE EVETP_SOURCE_SYS_ORIGIN = 'RDS_MEPOPERATIONTYPE'
+# MAGIC ) src
+# MAGIC ON trg.EVETP_SOURCE_ID = src.EVETP_SOURCE_ID
+# MAGIC     AND trg.EVETP_SOURCE_SYSTEM_ID = src.EVETP_SOURCE_SYSTEM_ID
+# MAGIC     AND trg.EVETP_SOURCE_SYS_ORIGIN = src.EVETP_SOURCE_SYS_ORIGIN
+# MAGIC     AND trg.EVETP_VALID_TO = src.EVETP_VALID_TO 
+# MAGIC WHERE src.EVETP_SOURCE_ID IS NULL;
+
+# COMMAND ----------
+
+# DBTITLE 1,Close Old Records in Target
+# MAGIC %sql
+# MAGIC UPDATE gap_catalog.ads_owner.EVENT_TYPES 
+# MAGIC SET EVETP_UPDATED_DATETIME = CURRENT_TIMESTAMP(),
+# MAGIC     EVETP_UPDATE_PROCESS_KEY = CAST(p_process_key AS BIGINT),
+# MAGIC     EVETP_CURRENT_FLAG = 'N', 
+# MAGIC     EVETP_VALID_TO = DATE_SUB(CAST(p_load_date AS DATE), 1)
+# MAGIC WHERE EVETP_CURRENT_FLAG = 'Y'
+# MAGIC     AND EVETP_VALID_TO = to_date('30000101','yyyyMMdd')
+# MAGIC     AND evetp_key||'.'||evetp_valid_from IN (
+# MAGIC         SELECT tech_rid 
+# MAGIC         FROM IDENTIFIER(dif_table_name) 
+# MAGIC         WHERE tech_rid IS NOT NULL
+# MAGIC     );
+
+# COMMAND ----------
+
+# DBTITLE 1,Insert Changed Records
+# MAGIC %sql
+# MAGIC INSERT INTO gap_catalog.ads_owner.EVENT_TYPES (
+# MAGIC     EVETP_KEY, 
+# MAGIC     EVETP_SOURCE_ID, 
+# MAGIC     EVETP_SOURCE_SYSTEM_ID, 
+# MAGIC     EVETP_SOURCE_SYS_ORIGIN, 
+# MAGIC     EVETP_DESC, 
+# MAGIC     EVETP_EVENT_TABLE_NAME, 
+# MAGIC     EVETP_VALID_FROM, 
+# MAGIC     EVETP_VALID_TO, 
+# MAGIC     EVETP_CURRENT_FLAG, 
+# MAGIC     EVETP_DELETED_FLAG, 
+# MAGIC     EVETP_INSERTED_DATETIME, 
+# MAGIC     EVETP_INSERT_PROCESS_KEY, 
+# MAGIC     EVETP_UPDATED_DATETIME, 
+# MAGIC     EVETP_UPDATE_PROCESS_KEY, 
+# MAGIC     EVETP_TARGET, 
+# MAGIC     EVETP_DATA_PATH
+# MAGIC )
+# MAGIC SELECT 
+# MAGIC     EVETP_KEY, 
+# MAGIC     EVETP_SOURCE_ID, 
+# MAGIC     EVETP_SOURCE_SYSTEM_ID, 
+# MAGIC     EVETP_SOURCE_SYS_ORIGIN, 
+# MAGIC     EVETP_DESC, 
+# MAGIC     EVETP_EVENT_TABLE_NAME, 
+# MAGIC     CAST(p_load_date AS DATE) AS EVETP_VALID_FROM, 
+# MAGIC     DATE('3000-01-01') AS EVETP_VALID_TO, 
+# MAGIC     'Y' AS EVETP_CURRENT_FLAG, 
+# MAGIC     tech_del_flg AS EVETP_DELETED_FLAG, 
+# MAGIC     CURRENT_TIMESTAMP() AS EVETP_INSERTED_DATETIME, 
+# MAGIC     CAST(p_process_key AS BIGINT) AS EVETP_INSERT_PROCESS_KEY, 
+# MAGIC     CURRENT_TIMESTAMP() AS EVETP_UPDATED_DATETIME, 
+# MAGIC     CAST(p_process_key AS BIGINT) AS EVETP_UPDATE_PROCESS_KEY, 
+# MAGIC     EVETP_TARGET, 
+# MAGIC     EVETP_DATA_PATH
+# MAGIC FROM IDENTIFIER(dif_table_name)
+# MAGIC WHERE tech_new_rec = 'N';
+
+# COMMAND ----------
+
+# DBTITLE 1,Insert New Records
+# MAGIC %sql
+# MAGIC INSERT INTO gap_catalog.ads_owner.EVENT_TYPES (
+# MAGIC     EVETP_KEY, 
+# MAGIC     EVETP_SOURCE_ID, 
+# MAGIC     EVETP_SOURCE_SYSTEM_ID, 
+# MAGIC     EVETP_SOURCE_SYS_ORIGIN, 
+# MAGIC     EVETP_DESC, 
+# MAGIC     EVETP_EVENT_TABLE_NAME, 
+# MAGIC     EVETP_VALID_FROM, 
+# MAGIC     EVETP_VALID_TO, 
+# MAGIC     EVETP_CURRENT_FLAG, 
+# MAGIC     EVETP_DELETED_FLAG, 
+# MAGIC     EVETP_INSERTED_DATETIME, 
+# MAGIC     EVETP_INSERT_PROCESS_KEY, 
+# MAGIC     EVETP_UPDATED_DATETIME, 
+# MAGIC     EVETP_UPDATE_PROCESS_KEY, 
+# MAGIC     EVETP_TARGET, 
+# MAGIC     EVETP_DATA_PATH
+# MAGIC )
+# MAGIC SELECT 
+# MAGIC     EVETP_KEY_NEW + max_key AS EVETP_KEY,  -- Add the offset to maintain key sequence
+# MAGIC     EVETP_SOURCE_ID, 
+# MAGIC     EVETP_SOURCE_SYSTEM_ID, 
+# MAGIC     EVETP_SOURCE_SYS_ORIGIN, 
+# MAGIC     EVETP_DESC, 
+# MAGIC     EVETP_EVENT_TABLE_NAME, 
+# MAGIC     CAST(p_load_date AS DATE) AS EVETP_VALID_FROM, 
+# MAGIC     DATE('3000-01-01') AS EVETP_VALID_TO, 
+# MAGIC     'Y' AS EVETP_CURRENT_FLAG, 
+# MAGIC     tech_del_flg AS EVETP_DELETED_FLAG, 
+# MAGIC     CURRENT_TIMESTAMP() AS EVETP_INSERTED_DATETIME, 
+# MAGIC     CAST(p_process_key AS BIGINT) AS EVETP_INSERT_PROCESS_KEY, 
+# MAGIC     CURRENT_TIMESTAMP() AS EVETP_UPDATED_DATETIME, 
+# MAGIC     CAST(p_process_key AS BIGINT) AS EVETP_UPDATE_PROCESS_KEY, 
+# MAGIC     EVETP_TARGET, 
+# MAGIC     EVETP_DATA_PATH
+# MAGIC FROM IDENTIFIER(dif_table_name)
+# MAGIC WHERE tech_new_rec = 'Y';
+
+# COMMAND ----------
+
+# DBTITLE 1,Target Table - Result Set
+# MAGIC %sql
+# MAGIC SELECT 
+# MAGIC     evetp_key,
+# MAGIC     evetp_source_id, 
+# MAGIC     evetp_valid_from,
+# MAGIC     evetp_valid_to, 
+# MAGIC     evetp_inserted_datetime, 
+# MAGIC     evetp_updated_datetime,
+# MAGIC     evetp_desc
+# MAGIC FROM gap_catalog.ads_owner.event_types 
+# MAGIC WHERE evetp_source_sys_origin = 'RDS_MEPOPERATIONTYPE' 
+# MAGIC ORDER BY evetp_source_id, evetp_updated_datetime DESC;
