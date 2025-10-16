@@ -1,8 +1,8 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC ## Mapping steps ADS_SMA_CASE_PHASE_PROPERTIES_MAIN_4
+# MAGIC ## Mapping steps ADS_SMA_CASE_PHASE_PROPERTIES_MAIN_BUSY_BANKING
 # MAGIC - Generated from Oracle Import file
-# MAGIC - Export date: 2025-09-13 17:13:24
+# MAGIC - Export date: 2025-09-13 17:13:25
 
 # COMMAND ----------
 
@@ -22,9 +22,9 @@
 dbutils.widgets.text("p_load_date", "2025-08-31", "Load Date")
 dbutils.widgets.text("p_process_key", "13165092", "Process Key")
 
-map_id = 'ADS_SMA_CASE_PHASE_PROPERTIES_MAIN_4'
+map_id = 'ADS_SMA_CASE_PHASE_PROPERTIES_MAIN_BUSY_BANKING'
 schema_name = 'gap_catalog.ads_owner'
-dif_table = 'gap_catalog.ads_owner.DIFF_ADS_SMA_CASE_PHASE_PROPERTIES_MAIN_4_ADS_MAP_SCD_DIFF'
+dif_table = 'gap_catalog.ads_owner.DIFF_ADS_SMA_CASE_PHASE_PROPERTIES_MAIN_BUSY_BANKING_ADS_MAP_SCD_DIFF'
 
 # Get the maximum CPPROP_KEY from Target table
 max_key_result = spark.sql("""
@@ -43,20 +43,13 @@ print("p_load_date: "+p_load_date)
 # COMMAND ----------
 
 # DBTITLE 1,Truncate XC Table
-# MAGIC %sql truncate table gap_catalog.ads_etl_owner.XC_SMA_CASE_PHASE_PROPERTIES_MAIN_4
+# MAGIC %sql truncate table gap_catalog.ads_etl_owner.XC_SMA_CASE_PHASE_PROPERTIES_MAIN_BUSY_BANKING
 
 # COMMAND ----------
 
 # DBTITLE 1,Fill XC Table
 # MAGIC %sql
-# MAGIC INSERT INTO gap_catalog.ads_etl_owner.XC_SMA_CASE_PHASE_PROPERTIES_MAIN_4 
-# MAGIC       WITH valid_case_types AS (
-# MAGIC           SELECT CTP_KEY
-# MAGIC           FROM gap_catalog.ads_owner.case_types
-# MAGIC           WHERE CTP_CATEGORY = 'SMARTCASE'
-# MAGIC             AND CTP_VALID_TO = TO_DATE('30000101', 'YYYYMMDD')
-# MAGIC             and mod(ctp_key,10) = 4
-# MAGIC       )
+# MAGIC INSERT INTO gap_catalog.ads_etl_owner.XC_SMA_CASE_PHASE_PROPERTIES_MAIN_BUSY_BANKING 
 # MAGIC       SELECT
 # MAGIC           STG_SMA.CPPROP_KEY,
 # MAGIC           STG_SMA.CPPROP_SOURCE_ID,
@@ -67,7 +60,7 @@ print("p_load_date: "+p_load_date)
 # MAGIC           STG_SMA.CPPTP_KEY,
 # MAGIC           NVL(CAS.CTP_KEY, -1) AS CTP_KEY,
 # MAGIC           STG_SMA.CASE_KEY,
-# MAGIC           NVL(CAS.CASE_START_DATE, TO_DATE('01011000', 'DDMMYYYY')) AS CASE_START_DATE,
+# MAGIC           NVL(CAS.CASE_START_DATE, TO_DATE('01011000', 'ddMMyyyy')) AS CASE_START_DATE,
 # MAGIC           STG_SMA.CPPROP_VALUE_TEXT,
 # MAGIC           STG_SMA.CPPROP_VALUE_DATE,
 # MAGIC           STG_SMA.CPPROP_VALUE_NUMBER,
@@ -75,25 +68,26 @@ print("p_load_date: "+p_load_date)
 # MAGIC       FROM
 # MAGIC           gap_catalog.ads_owner.SMA_CASE_PHASE_PROPERTIES STG_SMA
 # MAGIC       LEFT JOIN
-# MAGIC           gap_catalog.ads_owner.CASES PARTITION(PARTITION_30000101) CAS
+# MAGIC           gap_catalog.ads_owner.CASES CAS
 # MAGIC       ON
 # MAGIC           CAS.CASE_KEY = STG_SMA.CASE_KEY
-# MAGIC           AND CAS.CTP_KEY IN (SELECT CTP_KEY FROM valid_case_types)
+# MAGIC           AND CAS.CTP_KEY = 1429
+# MAGIC           AND CAS.CASE_VALID_TO >= TO_DATE('01013000', 'ddMMyyyy')
 # MAGIC       WHERE
-# MAGIC           STG_SMA.CTP_KEY IN (SELECT CTP_KEY FROM valid_case_types)
+# MAGIC           STG_SMA.CTP_KEY = 1429
 # MAGIC ;
 
 # COMMAND ----------
 
 # DBTITLE 1,Cleanup DIFF Table
 # MAGIC %sql
-# MAGIC DROP TABLE IF EXISTS gap_catalog.ads_owner.DIFF_ADS_SMA_CASE_PHASE_PROPERTIES_MAIN_4_ADS_MAP_SCD_DIFF;
+# MAGIC DROP TABLE IF EXISTS gap_catalog.ads_owner.DIFF_ADS_SMA_CASE_PHASE_PROPERTIES_MAIN_BUSY_BANKING_ADS_MAP_SCD_DIFF;
 
 # COMMAND ----------
 
 # DBTITLE 1,Create DIFF Table
 # MAGIC %sql
-# MAGIC create  table gap_catalog.ads_owner.DIFF_ADS_SMA_CASE_PHASE_PROPERTIES_MAIN_4_ADS_MAP_SCD_DIFF
+# MAGIC create  table gap_catalog.ads_owner.DIFF_ADS_SMA_CASE_PHASE_PROPERTIES_MAIN_BUSY_BANKING_ADS_MAP_SCD_DIFF
 # MAGIC ( tech_del_flg  char(1),
 # MAGIC   tech_new_rec  char(1),
 # MAGIC   tech_rid      varchar(255),
@@ -170,16 +164,18 @@ print("p_load_date: "+p_load_date)
 # MAGIC        CPPROP_VALUE_DATE, 
 # MAGIC        CPPROP_VALUE_NUMBER, 
 # MAGIC        CPPRV_KEY
-# MAGIC        from gap_catalog.ads_etl_owner.XC_SMA_CASE_PHASE_PROPERTIES_MAIN_4 xc
+# MAGIC        from gap_catalog.ads_etl_owner.XC_ADS_SMA_CASE_PHASE_PROPERTIES_MAIN_BUSY_BANKING xc
 # MAGIC     where (CPPROP_SOURCE_SYSTEM_ID = 'SMA'
 # MAGIC             AND CPPROP_SOURCE_SYS_ORIGIN = 'SMA_MONITOR_EVENTS'
-# MAGIC             AND CTP_KEY IN ( 20684,22704,22504,7304,7314,22474,71774,61474,61974,154,15724,13704,57774,4804,4904,3804,164,13584,47974,58774,14,24,14104,134,73574,49074,50874,15814,1294,1264,1314,1194,1424,864,1024,1464,734,224,1504,1524,1454,1474,1484,76704,73374,414,1084,1214,714,9484,2504,574,3604,3704,2364,3404,9744,774,70174,60684,84734,55774,84394,9614,77724,76074,87854,314,53274,364,88054,80424,72674,90184,88614,85644,57974,92044,90834,90744,92284,18274,92064,89454,91284,87464,85924,92094,88194,87634,89354,84134,84264,4304,88354 ))) src LEFT JOIN
+# MAGIC             AND CTP_KEY = 1429
+# MAGIC             and CPPTP_KEY IN (select /*+no_unnest*/ distinct CPPTP_KEY from gap_catalog.ads_etl_owner.XC_ADS_SMA_CASE_PHASE_PROPERTIES_MAIN_BUSY_BANKING))) src LEFT JOIN
 # MAGIC     (select  cpprop_key||'.'||cpprop_valid_from||'.'||ctp_key||'.'||case_start_date as rid, t.* from gap_catalog.ads_owner.CASE_PHASE_PROPERTIES t
 # MAGIC       where CPPROP_CURRENT_FLAG  = 'Y'
 # MAGIC         and CPPROP_VALID_TO  = to_date('01013000','ddMMyyyy')
 # MAGIC        and (CPPROP_SOURCE_SYSTEM_ID = 'SMA'
 # MAGIC             AND CPPROP_SOURCE_SYS_ORIGIN = 'SMA_MONITOR_EVENTS'
-# MAGIC             AND CTP_KEY IN ( 20684,22704,22504,7304,7314,22474,71774,61474,61974,154,15724,13704,57774,4804,4904,3804,164,13584,47974,58774,14,24,14104,134,73574,49074,50874,15814,1294,1264,1314,1194,1424,864,1024,1464,734,224,1504,1524,1454,1474,1484,76704,73374,414,1084,1214,714,9484,2504,574,3604,3704,2364,3404,9744,774,70174,60684,84734,55774,84394,9614,77724,76074,87854,314,53274,364,88054,80424,72674,90184,88614,85644,57974,92044,90834,90744,92284,18274,92064,89454,91284,87464,85924,92094,88194,87634,89354,84134,84264,4304,88354 ))      ) trg
+# MAGIC             AND CTP_KEY = 1429
+# MAGIC             and CPPTP_KEY IN (select /*+no_unnest*/ distinct CPPTP_KEY from gap_catalog.ads_etl_owner.XC_ADS_SMA_CASE_PHASE_PROPERTIES_MAIN_BUSY_BANKING))      ) trg
 # MAGIC ON trg.CPPROP_KEY = src.CPPROP_KEY
 # MAGIC  and trg.CPPROP_VALID_TO = to_date('30000101','yyyyMMdd') WHERE (
 # MAGIC      decode( src.CPPROP_SOURCE_ID,trg.CPPROP_SOURCE_ID,1,0 ) = 0  or
@@ -329,7 +325,7 @@ print("p_load_date: "+p_load_date)
 # MAGIC select * from (
 # MAGIC select '1-Source_Table', count(1) rec_cnt from gap_catalog.ads_etl_owner.DLK_ADS_LOV_RDS_ANALYTICALEVENTSTATUS where sys = 'Brasil'
 # MAGIC union all
-# MAGIC select '2-XC_SMA_CASE_PHASE_PROPERTIES_MAIN_4', count(1) from gap_catalog.ads_etl_owner.XC_SMA_CASE_PHASE_PROPERTIES_MAIN_4
+# MAGIC select '2-XC_SMA_CASE_PHASE_PROPERTIES_MAIN_BUSY_BANKING', count(1) from gap_catalog.ads_etl_owner.XC_SMA_CASE_PHASE_PROPERTIES_MAIN_BUSY_BANKING
 # MAGIC union all
 # MAGIC select '3-DIFF_TABLE', count(1) from  ${var.dif_table_name}
 # MAGIC union all
